@@ -1,8 +1,14 @@
 ---
 import { getCollection } from 'astro:content';
+import '../../styles.css';
 
 const posts = await getCollection('posts');
 const sortedPosts = posts.sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
+const dateFormatter = new Intl.DateTimeFormat('en', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
 ---
 
 <html lang="en">
@@ -10,51 +16,45 @@ const sortedPosts = posts.sort((a, b) => new Date(b.data.date).getTime() - new D
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>StarLost | AI Blog</title>
-    <style>
-      :root {
-        color-scheme: dark;
-        --bg: #07111f;
-        --surface: #101b2d;
-        --text: #f4f7fb;
-        --muted: #98a8bf;
-        --accent: #7dd3fc;
-        --border: rgba(255,255,255,0.08);
-      }
-      body {
-        margin: 0;
-        font-family: Inter, "Segoe UI", sans-serif;
-        background: linear-gradient(135deg, var(--bg), #0f172a 70%);
-        color: var(--text);
-        line-height: 1.6;
-      }
-      main { width: min(1080px, calc(100% - 2rem)); margin: 0 auto; padding: 2rem 0 3rem; }
-      .hero { padding: 3rem 0 2rem; }
-      h1 { font-size: clamp(2rem, 4vw, 3rem); margin-bottom: 0.75rem; }
-      .intro { color: var(--muted); max-width: 680px; }
-      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 2rem; }
-      .card { background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; padding: 1.25rem; }
-      .card a { color: var(--accent); text-decoration: none; font-weight: 600; }
-      .meta { color: var(--muted); font-size: 0.9rem; }
-    </style>
   </head>
   <body>
-    <main>
+    <div class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="/">StarLost</a>
+        <nav class="site-nav" aria-label="Primary">
+          <a href="#posts">Posts</a>
+          <a href="/posts/hello-ai">Latest</a>
+        </nav>
+      </header>
+
+      <main>
       <section class="hero">
-        <p style="color: var(--accent); text-transform: uppercase; letter-spacing: .2em; font-weight: 700; font-size: 0.8rem;">AI Journal</p>
+        <p class="eyebrow">AI Journal</p>
         <h1>Minimal thinking for a noisy AI era.</h1>
-        <p class="intro">Drop Markdown posts into the content folder and this site will render them as blog entries.</p>
+        <p class="hero-copy">Short posts, sparse surfaces, and a background that stays out of the way while the writing does the work.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#posts">Browse posts</a>
+          <a class="button secondary" href="/posts/hello-ai">Read the latest</a>
+        </div>
       </section>
 
-      <section class="grid">
+      <section class="posts-section" id="posts">
+        <div class="section-heading">
+          <p class="eyebrow">Recent entries</p>
+          <h2>One clear stream of notes.</h2>
+        </div>
+        <div class="card-grid">
         {sortedPosts.map((post) => (
-          <article class="card">
-            <p class="meta">{post.data.date}</p>
-            <h2>{post.data.title}</h2>
+          <article class={`card ${post === sortedPosts[0] ? 'featured' : ''}`}>
+            <p class="meta"><time datetime={post.data.date.toISOString()}>{dateFormatter.format(post.data.date)}</time></p>
+            <h3>{post.data.title}</h3>
             <p>{post.data.description}</p>
-            <a href={`/posts/${post.slug}`}>Read article →</a>
+            <a href={`/posts/${post.id}`}>Read article →</a>
           </article>
         ))}
+        </div>
       </section>
-    </main>
+      </main>
+    </div>
   </body>
 </html>

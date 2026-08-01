@@ -1,5 +1,12 @@
 ---
+import '../../styles.css';
+
 const { frontmatter } = Astro.props;
+const dateFormatter = new Intl.DateTimeFormat('en', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
 ---
 
 <html lang="en">
@@ -7,39 +14,30 @@ const { frontmatter } = Astro.props;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{frontmatter.title} | StarLost</title>
-    <style>
-      :root {
-        color-scheme: dark;
-        --bg: #07111f;
-        --surface: #101b2d;
-        --text: #f4f7fb;
-        --muted: #98a8bf;
-        --accent: #7dd3fc;
-      }
-      body {
-        margin: 0;
-        font-family: Inter, "Segoe UI", sans-serif;
-        background: linear-gradient(135deg, var(--bg), #0f172a 70%);
-        color: var(--text);
-        line-height: 1.7;
-      }
-      main {
-        width: min(860px, calc(100% - 2rem));
-        margin: 0 auto;
-        padding: 3rem 0 4rem;
-      }
-      a { color: var(--accent); }
-      .meta { color: var(--muted); margin-bottom: 1rem; }
-      article { background: var(--surface); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; padding: 2rem; }
-    </style>
   </head>
   <body>
-    <main>
-      <article>
-        <p class="meta">{frontmatter.date}</p>
-        <h1>{frontmatter.title}</h1>
-        <slot />
-      </article>
-    </main>
+    <div class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="/">StarLost</a>
+        <nav class="site-nav" aria-label="Primary">
+          <a href="/">Home</a>
+          <a href="/posts/hello-ai">Latest post</a>
+        </nav>
+      </header>
+
+      <main class="article-wrap">
+        <article class="article-shell">
+          <div class="article-meta-row">
+            <span class="pill">Post</span>
+            <time datetime={frontmatter.date.toISOString()}>{dateFormatter.format(frontmatter.date)}</time>
+          </div>
+          <h1 class="article-title">{frontmatter.title}</h1>
+          <p class="article-summary">{frontmatter.description}</p>
+          <div class="article-body">
+            <slot />
+          </div>
+        </article>
+      </main>
+    </div>
   </body>
 </html>
