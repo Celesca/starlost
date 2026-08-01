@@ -1,0 +1,56 @@
+---
+import { getCollection, getEntry, render } from 'astro:content';
+import BlogLayout from '../../layouts/BlogLayout.astro';
+import { buildWikiSidebarItems, pathFromEntry } from '../../lib/wiki-tree';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts');
+
+  return posts.map((post) => ({
+    params: { slug: pathFromEntry(post) },
+  }));
+}
+
+const posts = await getCollection('posts');
+const sidebarItems = buildWikiSidebarItems(posts, Array.isArray(Astro.params.slug) ? Astro.params.slug.join('/') : Astro.params.slug ?? '');
+const slug = Array.isArray(Astro.params.slug) ? Astro.params.slug.join('/') : Astro.params.slug ?? '';
+const post = await getEntry('posts', slug);
+
+if (!post) {
+  throw new Error(`Post not found: ${slug}`);
+}
+
+const { Content } = await render(post);
+const breadcrumbs = slug.split('/');
+---
+
+<BlogLayout pageTitle={post.data.title} sidebarItems={sidebarItems} currentSlug={slug}>
+  <article class="wiki-page">
+    <div class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="/">Home</a>
+      {breadcrumbs.map((segment, index) => {
+        const path = breadcrumbs.slice(0, index + 1).join('/');
+        const label = segment.replace(/[-_]+/g, ' ');
+
+        return (
+          <>
+            <span class="breadcrumbs-separator">/</span>
+            {index === breadcrumbs.length - 1 ? (
+              <span>{label}</span>
+            ) : (
+              <a href={`/posts/${path}`}>{label}</a>
+            )}
+          </>
+        );
+      })}
+    </div>
+
+    <p class="page-kicker">Page</p>
+    <h1>{post.data.title}</h1>
+    <p class="page-summary">{post.data.description}</p>
+
+    <div class="article-body">
+      <Content />
+    </div>
+  </article>
+</BlogLayout>

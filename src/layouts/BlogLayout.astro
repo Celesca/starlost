@@ -1,42 +1,44 @@
 ---
 import '../../styles.css';
 
-const { frontmatter } = Astro.props;
-const dateFormatter = new Intl.DateTimeFormat('en', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-});
+const {
+  pageTitle = 'StarLost',
+  sidebarItems = [],
+  currentSlug = '',
+} = Astro.props;
 ---
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{frontmatter.title} | StarLost</title>
+    <title>{pageTitle} | StarLost</title>
   </head>
   <body>
-    <div class="page-shell">
-      <header class="topbar">
-        <a class="brand" href="/">StarLost</a>
-        <nav class="site-nav" aria-label="Primary">
-          <a href="/">Home</a>
-          <a href="/posts/hello-ai">Latest post</a>
-        </nav>
-      </header>
+    <div class="wiki-shell">
+      <aside class="wiki-sidebar">
+        <a class="site-title" href="/">StarLost</a>
+        <p class="sidebar-note">Folder-based notes and minimal pages.</p>
 
-      <main class="article-wrap">
-        <article class="article-shell">
-          <div class="article-meta-row">
-            <span class="pill">Post</span>
-            <time datetime={frontmatter.date.toISOString()}>{dateFormatter.format(frontmatter.date)}</time>
-          </div>
-          <h1 class="article-title">{frontmatter.title}</h1>
-          <p class="article-summary">{frontmatter.description}</p>
-          <div class="article-body">
-            <slot />
-          </div>
-        </article>
+        <div class="sidebar-section">
+          <p class="sidebar-heading">Contents</p>
+          <nav aria-label="Wiki contents">
+            <ul class="wiki-nav">
+              {sidebarItems.map((item) => (
+                <li
+                  class={`wiki-nav-item ${item.kind} ${item.active ? 'is-active' : ''} ${item.branchActive ? 'is-branch-active' : ''}`}
+                  style={`--depth:${item.depth}`}
+                >
+                  {item.href ? <a href={item.href}>{item.label}</a> : <span>{item.label}</span>}
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="wiki-main">
+        <slot />
       </main>
     </div>
   </body>

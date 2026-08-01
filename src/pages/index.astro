@@ -1,9 +1,11 @@
 ---
 import { getCollection } from 'astro:content';
-import '../../styles.css';
+import BlogLayout from '../layouts/BlogLayout.astro';
+import { buildWikiSidebarItems, pathFromEntry } from '../lib/wiki-tree';
 
 const posts = await getCollection('posts');
-const sortedPosts = posts.sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
+const sidebarItems = buildWikiSidebarItems(posts);
+const recentPosts = [...posts].sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
 const dateFormatter = new Intl.DateTimeFormat('en', {
   month: 'short',
   day: 'numeric',
@@ -11,50 +13,27 @@ const dateFormatter = new Intl.DateTimeFormat('en', {
 });
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>StarLost | AI Blog</title>
-  </head>
-  <body>
-    <div class="page-shell">
-      <header class="topbar">
-        <a class="brand" href="/">StarLost</a>
-        <nav class="site-nav" aria-label="Primary">
-          <a href="#posts">Posts</a>
-          <a href="/posts/hello-ai">Latest</a>
-        </nav>
-      </header>
+<BlogLayout pageTitle="Home" sidebarItems={sidebarItems}>
+  <article class="wiki-page">
+    <p class="page-kicker">Home</p>
+    <h1>Minimal notes, organized by folder.</h1>
+    <p class="page-summary">
+      Use the sidebar on the left to move through the folder tree. A folder can have an index page and any number of nested Markdown pages beneath it.
+    </p>
 
-      <main>
-      <section class="hero">
-        <p class="eyebrow">AI Journal</p>
-        <h1>Minimal thinking for a noisy AI era.</h1>
-        <p class="hero-copy">Short posts, sparse surfaces, and a background that stays out of the way while the writing does the work.</p>
-        <div class="hero-actions">
-          <a class="button primary" href="#posts">Browse posts</a>
-          <a class="button secondary" href="/posts/hello-ai">Read the latest</a>
-        </div>
-      </section>
-
-      <section class="posts-section" id="posts">
-        <div class="section-heading">
-          <p class="eyebrow">Recent entries</p>
-          <h2>One clear stream of notes.</h2>
-        </div>
-        <div class="card-grid">
-        {sortedPosts.map((post) => (
-          <article class={`card ${post === sortedPosts[0] ? 'featured' : ''}`}>
-            <p class="meta"><time datetime={post.data.date.toISOString()}>{dateFormatter.format(post.data.date)}</time></p>
-            <h3>{post.data.title}</h3>
+    <section class="panel">
+      <h2>Recent pages</h2>
+      <ul class="page-list">
+        {recentPosts.map((post) => (
+          <li class="page-list-item">
+            <a href={`/posts/${pathFromEntry(post)}`}>{post.data.title}</a>
+            <div class="page-list-meta">
+              <time datetime={post.data.date.toISOString()}>{dateFormatter.format(post.data.date)}</time>
+            </div>
             <p>{post.data.description}</p>
-            <a href={`/posts/${post.id}`}>Read article →</a>
-          </article>
+          </li>
         ))}
-        </div>
-      </section>
-      </main>
-    </div>
-  </body>
-</html>
+      </ul>
+    </section>
+  </article>
+</BlogLayout>

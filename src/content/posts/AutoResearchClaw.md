@@ -1,3 +1,10 @@
+---
+title: AutoResearchClaw
+date: 2026-08-01
+description: A simple example post you can edit or replace.
+---
+
+
 # 1. Clone & install
 git clone https://github.com/aiming-lab/AutoResearchClaw.git
 cd AutoResearchClaw
