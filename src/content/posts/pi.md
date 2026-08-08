@@ -1,15 +1,7 @@
 ---
-title: Crawl4AI
+title: PI
 date: 2026-08-01
 description: A simple example post you can edit or replace.
 ---
 
-# Crawl4AI
-
-What is Crawl4AI?
-
-### Installation
-
-
-
-create the profiles
+# PI
