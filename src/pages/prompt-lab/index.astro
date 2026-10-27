@@ -1,0 +1,143 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+import '../../styles/lab.css';
+import { checklist, labSidebarItems } from '../../data/prompt-lab';
+
+const sidebarItems = labSidebarItems('overview');
+
+const components = [
+  { en: 'Instruction', th: 'คำสั่ง', desc: 'งานที่ต้องการให้ทำ' },
+  { en: 'Context', th: 'บริบท', desc: 'ข้อมูลพื้นหลังที่โมเดลต้องรู้' },
+  { en: 'Input Data', th: 'ข้อมูลนำเข้า', desc: 'เนื้อหาที่ต้องการให้ประมวลผล' },
+  { en: 'Output Format', th: 'รูปแบบผลลัพธ์', desc: 'ต้องการคำตอบหน้าตาแบบไหน' },
+  { en: 'Examples', th: 'ตัวอย่าง', desc: 'ตัวอย่างของผลลัพธ์ที่ดี' },
+  { en: 'Constraints', th: 'ข้อจำกัด', desc: 'ความยาว โทนเสียง สิ่งที่ห้ามทำ' },
+];
+---
+
+<BlogLayout
+  pageTitle="Prompt Lab"
+  sidebarItems={sidebarItems}
+  section="lab"
+  lang="th"
+  sidebarHeading="Prompt Lab"
+>
+  <article class="wiki-page lab-page">
+    <p class="page-kicker">AI Engineer 101 · Prompt Lab</p>
+    <h1>Bad Prompt vs Good Prompt</h1>
+    <p class="page-summary">
+      เรียนรู้การเขียน Prompt ผ่านการลงมือทำ เริ่มจากทำความเข้าใจว่า Prompt คืออะไร
+      จากนั้นฝึกแยก Prompt ที่ดีกับไม่ดีในส่วนที่ 1 แล้วลองเขียนและทดสอบกับ AI จริงในส่วนที่ 2
+    </p>
+
+    <section class="lab-prose" aria-labelledby="what-is-prompt">
+      <h2 id="what-is-prompt">Prompt คืออะไร</h2>
+      <h3>ความหมายของคำว่า "Prompt"</h3>
+      <p><strong>Prompt</strong> (พรอมต์) ในภาษาอังกฤษเป็นได้ทั้งคำกริยาและคำนาม</p>
+      <ul>
+        <li>
+          <strong>กริยา (to prompt):</strong> กระตุ้น เตือน ชี้นำ เป็นตัวจุดประกายให้ใครทำบางอย่าง
+          เช่น การกระซิบบอกบทให้นักแสดงละครเวทีที่ลืมบท
+        </li>
+        <li>
+          <strong>คำนาม (a prompt):</strong> สิ่งที่ใช้กระตุ้นหรือชี้นำนั้น
+          เช่น บทที่ถูกกระซิบบอก หรือโจทย์ที่ให้นักเรียนเขียนเรียงความ
+        </li>
+      </ul>
+      <p>
+        ในวงการ AI คำว่า <strong>Prompt</strong> หมายถึง
+        <strong>ข้อความหรือคำสั่งที่เราป้อนให้โมเดล AI เพื่อให้มันตอบสนองหรือทำงานตามที่เราต้องการ</strong>
+        ภาษาไทยอาจเรียกว่า "คำสั่ง" หรือ "ข้อความนำเข้า" แต่ส่วนใหญ่นิยมทับศัพท์ว่า "พรอมต์"
+        เพราะ Prompt ไม่ได้มีแค่คำสั่ง แต่รวมถึงบริบท ตัวอย่าง และข้อมูลที่เราให้ด้วย
+      </p>
+
+      <div class="lab-callout">
+        <strong>เปรียบเทียบให้เห็นภาพ:</strong> Prompt คือโจทย์ที่เราสั่ง
+        "พนักงานใหม่ที่เก่งมาก แต่ไม่รู้อะไรเกี่ยวกับงานเราเลย"
+        ถ้าสั่งว่า "ทำรายงานให้หน่อย" เขาต้องเดาเอง แต่ถ้าบอกว่าทำให้ใคร ทำไม ยาวเท่าไหร่ หน้าตาแบบไหน
+        เขาจะทำได้ตรงใจกว่ามาก
+      </div>
+
+      <h3>Prompt Engineering คืออะไร</h3>
+      <p>
+        <strong>Prompt Engineering</strong> คือทักษะการออกแบบ ทดสอบ และปรับปรุง Prompt
+        เพื่อให้ AI ให้ผลลัพธ์ที่แม่นยำ สม่ำเสมอ และนำไปใช้งานจริงได้
+        สำหรับ AI Engineer นี่คือทักษะพื้นฐาน เพราะ Prompt ที่ดีช่วยลดต้นทุน ลดข้อผิดพลาด
+        และลดโค้ดที่ต้องเขียนมาแก้ผลลัพธ์ทีหลัง
+      </p>
+
+      <h3>องค์ประกอบของ Prompt</h3>
+    </section>
+
+    <div class="lab-table-wrap">
+      <table class="lab-table">
+        <thead>
+          <tr><th>องค์ประกอบ</th><th>ความหมาย</th></tr>
+        </thead>
+        <tbody>
+          {components.map((c) => (
+            <tr>
+              <td><strong>{c.en}</strong> ({c.th})</td>
+              <td>{c.desc}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <h3>ตัวอย่างสั้น ๆ</h3>
+    <div class="lab-grid-2">
+      <div class="lab-card">
+        <p><span class="lab-badge bad">Bad Prompt</span></p>
+        <pre class="prompt-block">Write about Python.</pre>
+      </div>
+      <div class="lab-card">
+        <p><span class="lab-badge good">Good Prompt</span></p>
+        <pre class="prompt-block">Write a 300-word beginner-friendly introduction to Python for first-year university students who have never coded. Cover three reasons Python is easy to learn, include one short code example, and end with a suggestion for what to learn next.</pre>
+      </div>
+    </div>
+
+    <div class="lab-callout warn" style="margin-top:1rem">
+      <strong>หลักการข้อเดียวที่ต้องจำ:</strong> "Garbage in, garbage out"
+      Prompt ที่คลุมเครือจะได้คำตอบที่คลุมเครือ ยิ่งชัดเจน ยิ่งได้ผลดี
+    </div>
+
+    <section aria-labelledby="checklist">
+      <h2 id="checklist">เช็กลิสต์ Prompt ที่ดี (8 องค์ประกอบ)</h2>
+      <p class="lab-prose">
+        ใช้เช็กลิสต์นี้ตรวจ Prompt ทุกครั้งก่อนส่ง ทั้งสองส่วนของ Prompt Lab ใช้ 8 ข้อนี้เป็นเกณฑ์
+      </p>
+      <div class="lab-table-wrap">
+        <table class="lab-table">
+          <thead>
+            <tr><th>#</th><th>องค์ประกอบ</th><th>คำถามที่ควรถามตัวเอง</th><th>เคล็ดลับ</th></tr>
+          </thead>
+          <tbody>
+            {checklist.map((item, i) => (
+              <tr id={`check-${item.key}`}>
+                <td>{i + 1}</td>
+                <td><strong>{item.th}</strong><br /><span class="lab-badge">{item.en}</span></td>
+                <td>{item.question}</td>
+                <td>{item.tip}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="start">
+      <h2 id="start">เริ่มฝึก</h2>
+      <div class="lab-next">
+        <a href="/prompt-lab/quiz">
+          <strong>ส่วนที่ 1: เลือก Prompt ที่ดีกว่า →</strong>
+          <span>ดู Prompt สองแบบซ้ายและขวาในแต่ละองค์ประกอบ เลือกอันที่ดีกว่า แล้วดูเหตุผล</span>
+        </a>
+        <a href="/prompt-lab/playground">
+          <strong>ส่วนที่ 2: สนามทดลอง Prompt →</strong>
+          <span>เขียน Prompt เอง ส่งให้ AI จริง แล้วดูผลลัพธ์พร้อมคำวิจารณ์ตามเช็กลิสต์</span>
+        </a>
+      </div>
+    </section>
+  </article>
+</BlogLayout>

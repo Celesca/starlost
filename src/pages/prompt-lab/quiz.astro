@@ -1,0 +1,57 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+import PromptQuiz from '../../components/lab/PromptQuiz.astro';
+import '../../styles/lab.css';
+import { labSidebarItems } from '../../data/prompt-lab';
+import { quizItems } from '../../data/quiz-items';
+
+const sidebarItems = labSidebarItems('quiz');
+---
+
+<BlogLayout
+  pageTitle="ส่วนที่ 1: เลือก Prompt ที่ดีกว่า"
+  sidebarItems={sidebarItems}
+  section="lab"
+  lang="th"
+  sidebarHeading="Prompt Lab"
+>
+  <article class="wiki-page lab-page">
+    <p class="page-kicker">AI Engineer 101 · Prompt Lab · ส่วนที่ 1</p>
+    <h1>เลือก Prompt ที่ดีกว่า</h1>
+    <p class="page-summary">
+      ฝึกแยก Prompt ที่ดีกับไม่ดีจากสถานการณ์จริง {quizItems.length} ข้อ ครอบคลุมทั้ง 8 องค์ประกอบในเช็กลิสต์
+      แต่ละข้อมี Prompt ภาษาอังกฤษสองแบบให้เปรียบเทียบ
+    </p>
+
+    <section class="lab-prose" aria-labelledby="how-to-play">
+      <h2 id="how-to-play">วิธีเล่น</h2>
+      <ol>
+        <li>อ่าน <strong>สถานการณ์</strong> ว่าผู้ใช้ต้องการอะไร</li>
+        <li>เปรียบเทียบ Prompt A และ Prompt B แล้วกดปุ่ม "เลือก Prompt" ใต้อันที่คิดว่าดีกว่า (ใช้คีย์บอร์ด Tab และ Enter ได้) ข้อความ Prompt คัดลอกไปลองเองได้</li>
+        <li>ดูเฉลยทันที: Prompt ที่ไม่ดีพลาดตรงไหน ทำไมอีกอันดีกว่า และข้อคิดที่ควรจำ</li>
+        <li>กดปุ่มหมวดด้านบนเพื่อฝึกเฉพาะองค์ประกอบ หรือกด "ดูสรุปผล" เพื่อดูว่าควรทบทวนข้อไหน</li>
+      </ol>
+      <p class="lab-callout">
+        ตำแหน่งของ Prompt ที่ดีถูกสุ่มทุกข้อ และระวัง: Prompt ที่ยาวกว่าไม่ได้ดีกว่าเสมอไป
+        ให้ดูว่า Prompt นั้นครบตาม <a href="/prompt-lab#checklist">เช็กลิสต์ 8 องค์ประกอบ</a> หรือไม่
+        ความคืบหน้าจะถูกบันทึกไว้ในเบราว์เซอร์นี้
+      </p>
+    </section>
+
+    <PromptQuiz />
+
+    <section aria-labelledby="next-step">
+      <h2 id="next-step">ขั้นต่อไป</h2>
+      <div class="lab-next">
+        <a href="/prompt-lab">
+          <strong>← ภาพรวม: Prompt คืออะไร</strong>
+          <span>ทบทวนความหมายของ Prompt และเช็กลิสต์ 8 องค์ประกอบ</span>
+        </a>
+        <a href="/prompt-lab/playground">
+          <strong>ส่วนที่ 2: สนามทดลอง Prompt →</strong>
+          <span>เขียน Prompt เอง ส่งให้ AI จริง แล้วดูผลลัพธ์พร้อมคำวิจารณ์ตามเช็กลิสต์</span>
+        </a>
+      </div>
+    </section>
+  </article>
+</BlogLayout>

@@ -5,6 +5,11 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    environment:
+      # Set in a .env file next to this compose file (see .env.example).
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:?Set OPENROUTER_API_KEY in .env}
+      # Optional: students must enter this code in the playground. Empty = no code.
+      LAB_ACCESS_CODE: ${LAB_ACCESS_CODE:-}
     ports:
       - "127.0.0.1:3000:3000"
   caddy:

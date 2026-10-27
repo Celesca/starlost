@@ -254,6 +254,35 @@ img {
   color: var(--muted);
 }
 
+/* Section tabs (Blog / Prompt Lab) */
+.section-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.section-tab {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.section-tab:hover {
+  background: var(--sidebar-bg);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.section-tab.is-active {
+  background: var(--accent);
+  color: #ffffff;
+}
+
 @media (max-width: 920px) {
   .wiki-shell {
     grid-template-columns: 1fr;
