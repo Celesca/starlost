@@ -1,0 +1,813 @@
+---
+// Interactive "pick the better prompt" quiz for Prompt Lab, Section 1.
+// Data is embedded as JSON and rendered on the client with textContent only,
+// so prompts containing tags like <email> are always shown literally.
+import { checklist } from '../../data/prompt-lab';
+import { quizItems } from '../../data/quiz-items';
+
+const payload = JSON.stringify({ items: quizItems, checklist }).replace(/</g, '\\u003c');
+---
+
+<div class="prompt-quiz" data-prompt-quiz>
+  <script type="application/json" id="pq-data" set:html={payload}></script>
+
+  <noscript>
+    <p class="lab-callout warn">แบบฝึกหัดนี้ต้องเปิดใช้งาน JavaScript ในเบราว์เซอร์</p>
+  </noscript>
+
+  <div class="pq-toolbar">
+    <div class="pq-chips" role="group" aria-label="กรองตามองค์ประกอบ">
+      <button type="button" class="pq-chip" data-filter="all" aria-pressed="true">
+        ทั้งหมด <span class="pq-chip-count" data-count="all"></span>
+      </button>
+      {checklist.map((c) => (
+        <button type="button" class="pq-chip" data-filter={c.key} aria-pressed="false">
+          {c.th} <span class="pq-chip-count" data-count={c.key}></span>
+        </button>
+      ))}
+    </div>
+
+    <div class="pq-status">
+      <div
+        class="pq-progress"
+        role="progressbar"
+        aria-label="ความคืบหน้า"
+        aria-valuemin="0"
+        aria-valuemax={quizItems.length}
+        aria-valuenow="0"
+        data-progress
+      >
+        <span class="pq-progress-fill" data-progress-fill></span>
+      </div>
+      <p class="pq-status-text">
+        <span data-progress-text>ตอบแล้ว 0 จาก {quizItems.length} ข้อ</span>
+        <span class="pq-sep" aria-hidden="true">·</span>
+        <strong data-score>ถูก 0 จาก 0</strong>
+      </p>
+      <div class="pq-status-actions">
+        <button type="button" class="lab-btn secondary" data-action="summary">ดูสรุปผล</button>
+        <button type="button" class="lab-btn secondary" data-action="restart">เริ่มใหม่</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="pq-question lab-card" aria-labelledby="pq-q-title">
+    <div class="pq-meta">
+      <h2 id="pq-q-title" class="pq-q-title" tabindex="-1" data-q-title>ข้อ 1</h2>
+      <span class="lab-badge" data-q-element></span>
+    </div>
+    <p class="pq-scenario"><strong>สถานการณ์:</strong> <span data-q-scenario></span></p>
+    <p class="pq-instruction">Prompt ไหนดีกว่า? อ่านทั้งสองอันแล้วกดปุ่มเลือกใต้ Prompt ที่คิดว่าดีกว่า</p>
+
+    <div class="lab-grid-2 pq-choices">
+      {[
+        { side: 'left', letter: 'A' },
+        { side: 'right', letter: 'B' },
+      ].map((c) => (
+        <div
+          class="pq-choice"
+          data-side={c.side}
+          role="group"
+          aria-labelledby={`pq-label-${c.side} pq-badge-${c.side}`}
+        >
+          <div class="pq-choice-head">
+            <span class="pq-choice-label" id={`pq-label-${c.side}`}>Prompt {c.letter}</span>
+            <span class="lab-badge pq-choice-badge" id={`pq-badge-${c.side}`} data-badge hidden></span>
+          </div>
+          <pre class="prompt-block pq-prompt" lang="en" data-prompt></pre>
+          <button type="button" class="lab-btn pq-choose" data-choose>เลือก Prompt {c.letter}</button>
+        </div>
+      ))}
+    </div>
+
+    <div class="pq-feedback" data-feedback tabindex="-1" hidden>
+      <p class="pq-verdict" data-verdict></p>
+      <div class="lab-callout bad" data-wrong-box>
+        <h3 data-wrong-title>ผิดตรงไหน</h3>
+        <p data-wrong-text></p>
+      </div>
+      <div class="lab-callout good">
+        <h3>ทำไมอันนี้ดีกว่า</h3>
+        <p data-why-text></p>
+      </div>
+      <p class="pq-takeaway"><strong>ข้อคิด:</strong> <span data-takeaway></span></p>
+      <p class="pq-review"><a data-review-link href="/prompt-lab#checklist">ทบทวนเช็กลิสต์ข้อนี้</a></p>
+    </div>
+
+    <div class="pq-nav">
+      <button type="button" class="lab-btn secondary" data-action="prev">← ข้อก่อนหน้า</button>
+      <button type="button" class="lab-btn" data-action="next">ข้อถัดไป →</button>
+    </div>
+  </section>
+
+  <p class="pq-live" aria-live="polite" role="status" data-live></p>
+
+  <section class="pq-summary lab-card" aria-labelledby="pq-summary-title" data-summary hidden>
+    <h2 id="pq-summary-title" tabindex="-1" data-summary-title>สรุปผล</h2>
+    <p class="pq-overall" data-overall></p>
+    <div class="lab-table-wrap">
+      <table class="lab-table">
+        <thead>
+          <tr><th>องค์ประกอบ</th><th>ถูก / ตอบแล้ว</th><th>จำนวนข้อ</th><th>ผล</th></tr>
+        </thead>
+        <tbody data-summary-rows></tbody>
+      </table>
+    </div>
+    <h3>องค์ประกอบที่ควรทบทวน</h3>
+    <div data-weak></div>
+    <p class="pq-summary-actions">
+      <button type="button" class="lab-btn" data-action="restart">เริ่มใหม่ (สลับลำดับข้อและตำแหน่ง Prompt)</button>
+    </p>
+  </section>
+</div>
+
+<style>
+  .prompt-quiz {
+    margin: 1.25rem 0 2rem;
+  }
+
+  .pq-toolbar {
+    margin-bottom: 1rem;
+  }
+
+  .pq-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .pq-chip {
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .pq-chip:hover {
+    border-color: var(--accent);
+  }
+
+  .pq-chip[aria-pressed='true'] {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #ffffff;
+  }
+
+  .pq-chip-count {
+    margin-left: 0.2rem;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.85;
+  }
+
+  .pq-chip :global(.is-done) {
+    font-weight: 700;
+  }
+
+  .pq-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+  }
+
+  .pq-progress {
+    flex: 1 1 220px;
+    height: 10px;
+    border: 1px solid var(--border);
+    background: var(--sidebar-bg);
+  }
+
+  .pq-progress-fill {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.2s ease;
+  }
+
+  .pq-status-text {
+    margin: 0 !important;
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pq-sep {
+    margin: 0 0.35rem;
+    color: var(--muted);
+  }
+
+  .pq-status-actions {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .pq-status-actions .lab-btn {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.88rem;
+  }
+
+  .pq-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .prompt-quiz .pq-q-title {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  .pq-scenario {
+    max-width: 75ch;
+  }
+
+  .pq-instruction {
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+
+  /* Anything the script hides must stay hidden, even when a shared class
+     (.lab-badge, .lab-btn) sets its own display value. */
+  .prompt-quiz [hidden] {
+    display: none !important;
+  }
+
+  .pq-choice {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-width: 0;
+    padding: 0.8rem;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .pq-choice:has(.pq-choose:hover),
+  .pq-choice:has(.pq-choose:focus-visible) {
+    border-color: var(--accent);
+  }
+
+  .pq-choice-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+  }
+
+  .pq-choice-label {
+    font-weight: 700;
+  }
+
+  .pq-prompt {
+    flex: 1 1 auto;
+    user-select: text;
+  }
+
+  .pq-choose {
+    align-self: flex-start;
+  }
+
+  .pq-choice-badge:empty {
+    display: none;
+  }
+
+  .pq-choice.is-correct,
+  .pq-choice.is-good {
+    border-color: var(--good);
+    box-shadow: inset 0 0 0 1px var(--good);
+    background: var(--good-bg);
+  }
+
+  .pq-choice.is-wrong {
+    border-color: var(--bad);
+    box-shadow: inset 0 0 0 1px var(--bad);
+    background: var(--bad-bg);
+  }
+
+  .pq-choice.is-dim {
+    opacity: 0.8;
+  }
+
+  .pq-feedback {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-soft);
+  }
+
+  .pq-feedback:focus {
+    outline: none;
+  }
+
+  .pq-feedback:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+  }
+
+  .pq-verdict {
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .pq-verdict.is-correct {
+    color: var(--good);
+  }
+
+  .pq-verdict.is-wrong {
+    color: var(--bad);
+  }
+
+  .pq-feedback h3 {
+    margin: 0 0 0.3rem;
+    font-size: 0.98rem;
+  }
+
+  .pq-feedback .lab-callout p {
+    margin: 0;
+  }
+
+  .pq-takeaway {
+    max-width: 75ch;
+  }
+
+  .pq-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .pq-live {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .pq-summary {
+    margin-top: 1.25rem;
+  }
+
+  .prompt-quiz .pq-summary h2 {
+    margin-top: 0;
+  }
+
+  .pq-overall {
+    font-size: 1.05rem;
+  }
+
+  .pq-summary :global(.pq-weak-item p) {
+    margin: 0.25rem 0 0;
+  }
+
+  .pq-summary-actions {
+    margin-top: 1rem;
+  }
+
+  .prompt-quiz button:focus-visible,
+  .prompt-quiz a:focus-visible,
+  .prompt-quiz :global(a:focus-visible),
+  .prompt-quiz [tabindex='-1']:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .prompt-quiz [tabindex='-1']:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  @media (max-width: 760px) {
+    .pq-nav .lab-btn {
+      flex: 1 1 0;
+    }
+  }
+</style>
+
+<script>
+  import type { QuizItem } from '../../data/quiz-items';
+  import type { ChecklistItem, ChecklistKey } from '../../data/prompt-lab';
+
+  type Side = 'left' | 'right';
+  type Filter = 'all' | ChecklistKey;
+  type State = {
+    order: string[];
+    goodSide: Record<string, Side>;
+    answers: Record<string, boolean>; // id -> answered correctly?
+    filter: Filter;
+    current: string;
+    showSummary: boolean;
+  };
+
+  const STORAGE_KEY = 'starlost:prompt-lab:quiz:v1';
+
+  function shuffle<T>(list: T[]): T[] {
+    const a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function init(root: HTMLElement) {
+    const dataEl = root.querySelector('#pq-data');
+    if (!dataEl) return;
+    const data = JSON.parse(dataEl.textContent || '{}') as {
+      items: QuizItem[];
+      checklist: ChecklistItem[];
+    };
+    const items = data.items;
+    const checklist = data.checklist;
+    const ids = items.map((i) => i.id);
+    const byId = new Map(items.map((i) => [i.id, i] as const));
+    const checkByKey = new Map(checklist.map((c) => [c.key, c] as const));
+    const validFilters = new Set<string>(['all', ...checklist.map((c) => c.key)]);
+
+    const $ = <T extends Element = HTMLElement>(sel: string) => root.querySelector(sel) as T;
+    const $$ = <T extends Element = HTMLElement>(sel: string) =>
+      Array.from(root.querySelectorAll(sel)) as T[];
+
+    const el = {
+      chips: $$<HTMLButtonElement>('.pq-chip'),
+      progress: $('[data-progress]'),
+      progressFill: $('[data-progress-fill]'),
+      progressText: $('[data-progress-text]'),
+      score: $('[data-score]'),
+      qTitle: $('[data-q-title]'),
+      qElement: $('[data-q-element]'),
+      qScenario: $('[data-q-scenario]'),
+      choices: $$<HTMLElement>('.pq-choice'),
+      feedback: $('[data-feedback]'),
+      verdict: $('[data-verdict]'),
+      wrongTitle: $('[data-wrong-title]'),
+      wrongText: $('[data-wrong-text]'),
+      whyText: $('[data-why-text]'),
+      takeaway: $('[data-takeaway]'),
+      reviewLink: $<HTMLAnchorElement>('[data-review-link]'),
+      prev: $<HTMLButtonElement>('[data-action="prev"]'),
+      next: $<HTMLButtonElement>('[data-action="next"]'),
+      live: $('[data-live]'),
+      summary: $('[data-summary]'),
+      summaryTitle: $('[data-summary-title]'),
+      overall: $('[data-overall]'),
+      rows: $('[data-summary-rows]'),
+      weak: $('[data-weak]'),
+    };
+
+    function freshState(): State {
+      const goodSide: Record<string, Side> = {};
+      for (const id of ids) goodSide[id] = Math.random() < 0.5 ? 'left' : 'right';
+      const order = shuffle(ids);
+      return { order, goodSide, answers: {}, filter: 'all', current: order[0], showSummary: false };
+    }
+
+    function loadState(): State {
+      try {
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        if (!raw) return freshState();
+        const s = JSON.parse(raw) as Partial<State>;
+        const sameSet =
+          Array.isArray(s.order) &&
+          s.order.length === ids.length &&
+          ids.every((id) => s.order!.includes(id));
+        if (!sameSet || !s.goodSide || typeof s.goodSide !== 'object') return freshState();
+        const goodSide: Record<string, Side> = {};
+        for (const id of ids) {
+          const v = s.goodSide[id];
+          goodSide[id] = v === 'left' || v === 'right' ? v : Math.random() < 0.5 ? 'left' : 'right';
+        }
+        const answers: Record<string, boolean> = {};
+        if (s.answers && typeof s.answers === 'object') {
+          for (const [k, v] of Object.entries(s.answers)) {
+            if (byId.has(k) && typeof v === 'boolean') answers[k] = v;
+          }
+        }
+        const filter = (validFilters.has(String(s.filter)) ? s.filter : 'all') as Filter;
+        const current = s.current && byId.has(s.current) ? s.current : s.order![0];
+        return { order: s.order!, goodSide, answers, filter, current, showSummary: !!s.showSummary };
+      } catch {
+        return freshState();
+      }
+    }
+
+    function saveState() {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch {
+        /* storage unavailable: progress lives in memory only */
+      }
+    }
+
+    let state = loadState();
+
+    const answeredCount = () => Object.keys(state.answers).length;
+    const correctCount = () => Object.values(state.answers).filter(Boolean).length;
+    const allAnswered = () => answeredCount() === ids.length;
+
+    function visibleIds(): string[] {
+      return state.order.filter(
+        (id) => state.filter === 'all' || byId.get(id)!.element === state.filter,
+      );
+    }
+
+    function announce(message: string) {
+      el.live.textContent = '';
+      window.setTimeout(() => {
+        el.live.textContent = message;
+      }, 50);
+    }
+
+    function elementLabel(key: ChecklistKey): string {
+      const c = checkByKey.get(key);
+      return c ? `${c.th} (${c.en})` : key;
+    }
+
+    function renderChips() {
+      for (const chip of el.chips) {
+        const f = chip.dataset.filter as Filter;
+        const group = f === 'all' ? ids : ids.filter((id) => byId.get(id)!.element === f);
+        const done = group.filter((id) => id in state.answers).length;
+        const count = chip.querySelector('.pq-chip-count');
+        if (count) {
+          count.textContent = `${done}/${group.length}`;
+          count.classList.toggle('is-done', done === group.length);
+        }
+        chip.setAttribute('aria-pressed', String(f === state.filter));
+      }
+    }
+
+    function renderStatus() {
+      const answered = answeredCount();
+      const pct = Math.round((answered / ids.length) * 100);
+      el.progressFill.style.width = `${pct}%`;
+      el.progress.setAttribute('aria-valuenow', String(answered));
+      el.progress.setAttribute('aria-valuetext', `ตอบแล้ว ${answered} จาก ${ids.length} ข้อ`);
+      el.progressText.textContent = `ตอบแล้ว ${answered} จาก ${ids.length} ข้อ`;
+      el.score.textContent = `ถูก ${correctCount()} จาก ${answered}`;
+    }
+
+    function renderQuestion() {
+      const list = visibleIds();
+      if (!list.includes(state.current)) state.current = list[0];
+      const idx = list.indexOf(state.current);
+      const item = byId.get(state.current)!;
+      const goodSide = state.goodSide[item.id];
+      const answered = item.id in state.answers;
+      const correct = state.answers[item.id] === true;
+      const chosenSide: Side | null = answered
+        ? correct
+          ? goodSide
+          : goodSide === 'left'
+            ? 'right'
+            : 'left'
+        : null;
+
+      const scope = state.filter === 'all' ? '' : ` (หมวด${checkByKey.get(state.filter)?.th ?? ''})`;
+      el.qTitle.textContent = `ข้อ ${idx + 1} จาก ${list.length}${scope}`;
+      el.qElement.textContent = `องค์ประกอบ: ${elementLabel(item.element)}`;
+      el.qScenario.textContent = item.scenario;
+
+      for (const card of el.choices) {
+        const side = card.dataset.side as Side;
+        const isGood = side === goodSide;
+        (card.querySelector('[data-prompt]') as HTMLElement).textContent = isGood
+          ? item.goodPrompt
+          : item.badPrompt;
+        const badge = card.querySelector('[data-badge]') as HTMLElement;
+        const chooseBtn = card.querySelector('[data-choose]') as HTMLButtonElement;
+        card.classList.remove('is-correct', 'is-wrong', 'is-good', 'is-dim');
+        badge.className = 'lab-badge pq-choice-badge';
+        chooseBtn.hidden = answered;
+        if (!answered) {
+          badge.hidden = true;
+          badge.textContent = '';
+          continue;
+        }
+        badge.hidden = false;
+        const chosen = side === chosenSide;
+        if (chosen && isGood) {
+          card.classList.add('is-correct');
+          badge.classList.add('good');
+          badge.textContent = 'คุณเลือก · Prompt ที่ดีกว่า';
+        } else if (chosen && !isGood) {
+          card.classList.add('is-wrong');
+          badge.classList.add('bad');
+          badge.textContent = 'คุณเลือก · ยังไม่ดี';
+        } else if (isGood) {
+          card.classList.add('is-good');
+          badge.classList.add('good');
+          badge.textContent = 'Prompt ที่ดีกว่า';
+        } else {
+          card.classList.add('is-dim');
+          badge.classList.add('bad');
+          badge.textContent = 'Prompt ที่ยังไม่ดี';
+        }
+      }
+
+      el.feedback.hidden = !answered;
+      if (answered) {
+        const goodLetter = goodSide === 'left' ? 'A' : 'B';
+        const badLetter = goodSide === 'left' ? 'B' : 'A';
+        el.verdict.className = `pq-verdict ${correct ? 'is-correct' : 'is-wrong'}`;
+        el.verdict.textContent = correct
+          ? `ถูกต้อง! Prompt ${goodLetter} ดีกว่า`
+          : `ยังไม่ถูก Prompt ที่ดีกว่าคือ Prompt ${goodLetter}`;
+        el.wrongTitle.textContent = correct
+          ? `Prompt ${badLetter} พลาดตรงไหน`
+          : `ผิดตรงไหน (Prompt ${badLetter})`;
+        el.wrongText.textContent = item.whatIsWrong;
+        el.whyText.textContent = item.whyGood;
+        el.takeaway.textContent = item.takeaway;
+        el.reviewLink.href = `/prompt-lab#check-${item.element}`;
+        el.reviewLink.textContent = `ทบทวนเช็กลิสต์ข้อนี้: ${elementLabel(item.element)}`;
+      }
+
+      el.prev.disabled = idx <= 0;
+      el.next.textContent = idx < list.length - 1 ? 'ข้อถัดไป →' : 'ดูสรุปผล';
+    }
+
+    function renderSummary() {
+      const visible = state.showSummary || allAnswered();
+      el.summary.hidden = !visible;
+      if (!visible) return;
+
+      const answered = answeredCount();
+      const correct = correctCount();
+      const pct = answered ? Math.round((correct / answered) * 100) : 0;
+      el.overall.textContent = allAnswered()
+        ? `คุณตอบถูก ${correct} จาก ${ids.length} ข้อ (${pct}%)`
+        : `ตอบแล้ว ${answered} จาก ${ids.length} ข้อ ถูก ${correct} ข้อ (${pct}% ของข้อที่ตอบ) ยังเหลืออีก ${ids.length - answered} ข้อ`;
+
+      el.rows.replaceChildren();
+      const stats = checklist.map((c) => {
+        const group = ids.filter((id) => byId.get(id)!.element === c.key);
+        const done = group.filter((id) => id in state.answers);
+        const right = done.filter((id) => state.answers[id]).length;
+        return { c, total: group.length, done: done.length, right, wrong: done.length - right };
+      });
+
+      for (const s of stats) {
+        const tr = document.createElement('tr');
+        const tdName = document.createElement('td');
+        const link = document.createElement('a');
+        link.href = `/prompt-lab#check-${s.c.key}`;
+        link.textContent = `${s.c.th} (${s.c.en})`;
+        tdName.append(link);
+        const tdScore = document.createElement('td');
+        tdScore.textContent = `${s.right} / ${s.done}`;
+        const tdTotal = document.createElement('td');
+        tdTotal.textContent = String(s.total);
+        const tdResult = document.createElement('td');
+        const badge = document.createElement('span');
+        badge.className = 'lab-badge';
+        if (s.wrong > 0) {
+          badge.classList.add('bad');
+          badge.textContent = `ผิด ${s.wrong} ข้อ`;
+        } else if (s.done < s.total) {
+          badge.textContent = 'ยังตอบไม่ครบ';
+        } else {
+          badge.classList.add('good');
+          badge.textContent = 'ถูกทุกข้อ';
+        }
+        tdResult.append(badge);
+        tr.append(tdName, tdScore, tdTotal, tdResult);
+        el.rows.append(tr);
+      }
+
+      el.weak.replaceChildren();
+      const weak = stats
+        .filter((s) => s.wrong > 0)
+        .sort((a, b) => a.right / a.done - b.right / b.done || b.wrong - a.wrong)
+        .slice(0, 3);
+
+      if (weak.length === 0) {
+        const p = document.createElement('p');
+        p.className = 'lab-callout good';
+        p.textContent =
+          answered === 0
+            ? 'ยังไม่ได้ตอบข้อไหนเลย ลองเริ่มจากข้อแรกด้านบน'
+            : 'ยังไม่มีองค์ประกอบที่ตอบผิด เยี่ยมมาก ลองนำเช็กลิสต์ไปใช้เขียน Prompt เองในส่วนที่ 2';
+        el.weak.append(p);
+        return;
+      }
+
+      for (const s of weak) {
+        const box = document.createElement('div');
+        box.className = 'lab-callout warn pq-weak-item';
+        const head = document.createElement('strong');
+        head.textContent = `${s.c.th} (${s.c.en}): ถูก ${s.right} จาก ${s.done} ข้อ`;
+        const q = document.createElement('p');
+        q.textContent = `คำถามที่ควรถามตัวเอง: ${s.c.question}`;
+        const tip = document.createElement('p');
+        tip.textContent = `เคล็ดลับ: ${s.c.tip}`;
+        const more = document.createElement('p');
+        const a = document.createElement('a');
+        a.href = `/prompt-lab#check-${s.c.key}`;
+        a.textContent = 'ทบทวนเช็กลิสต์ข้อนี้';
+        more.append(a);
+        box.append(head, q, tip, more);
+        el.weak.append(box);
+      }
+    }
+
+    function render() {
+      renderChips();
+      renderStatus();
+      renderQuestion();
+      renderSummary();
+    }
+
+    function goTo(id: string) {
+      state.current = id;
+      saveState();
+      render();
+      el.qTitle.focus();
+    }
+
+    function openSummary() {
+      state.showSummary = true;
+      saveState();
+      render();
+      el.summaryTitle.focus();
+      el.summary.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function choose(side: Side) {
+      const id = state.current;
+      if (id in state.answers) return;
+      const correct = side === state.goodSide[id];
+      state.answers[id] = correct;
+      saveState();
+      render();
+      const item = byId.get(id)!;
+      let msg = correct
+        ? 'ถูกต้อง! คุณเลือก Prompt ที่ดีกว่า'
+        : `ยังไม่ถูก Prompt ที่ดีกว่าคืออีกอันหนึ่ง จุดที่พลาดคือเรื่อง${checkByKey.get(item.element)?.th ?? ''}`;
+      msg += ` · ถูก ${correctCount()} จาก ${answeredCount()}`;
+      if (allAnswered()) msg += ' · ตอบครบทุกข้อแล้ว ดูสรุปผลได้ด้านล่าง';
+      announce(msg);
+      el.feedback.focus();
+    }
+
+    function restart() {
+      state = freshState();
+      saveState();
+      el.live.textContent = '';
+      render();
+      announce('เริ่มใหม่แล้ว สลับลำดับข้อและตำแหน่ง Prompt ใหม่');
+      el.qTitle.focus();
+      el.qTitle.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    for (const chip of el.chips) {
+      chip.addEventListener('click', () => {
+        state.filter = (chip.dataset.filter as Filter) ?? 'all';
+        const list = visibleIds();
+        state.current = list.find((id) => !(id in state.answers)) ?? list[0];
+        saveState();
+        render();
+      });
+    }
+
+    for (const card of el.choices) {
+      const chooseBtn = card.querySelector('[data-choose]') as HTMLButtonElement;
+      chooseBtn.addEventListener('click', () => choose(card.dataset.side as Side));
+    }
+
+    el.prev.addEventListener('click', () => {
+      const list = visibleIds();
+      const idx = list.indexOf(state.current);
+      if (idx > 0) goTo(list[idx - 1]);
+    });
+
+    el.next.addEventListener('click', () => {
+      const list = visibleIds();
+      const idx = list.indexOf(state.current);
+      if (idx < list.length - 1) goTo(list[idx + 1]);
+      else openSummary();
+    });
+
+    for (const b of $$<HTMLButtonElement>('[data-action="summary"]')) {
+      b.addEventListener('click', openSummary);
+    }
+    for (const b of $$<HTMLButtonElement>('[data-action="restart"]')) {
+      b.addEventListener('click', restart);
+    }
+
+    render();
+  }
+
+  const root = document.querySelector<HTMLElement>('[data-prompt-quiz]');
+  if (root) init(root);
+</script>

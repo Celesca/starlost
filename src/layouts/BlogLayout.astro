@@ -5,14 +5,23 @@ const {
   pageTitle = 'StarLost',
   sidebarItems = [],
   currentSlug = '',
+  section = 'blog',
+  lang = 'en',
+  sidebarHeading = 'Contents',
 } = Astro.props;
+
+const sections = [
+  { key: 'blog', label: 'Blog', href: '/' },
+  { key: 'lab', label: 'Prompt Lab', href: '/prompt-lab' },
+];
 ---
 
-<html lang="en">
+<html lang={lang}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{pageTitle} | StarLost</title>
+    <slot name="head" />
   </head>
   <body>
     <div class="wiki-shell">
@@ -20,8 +29,20 @@ const {
         <a class="site-title" href="/">StarLost</a>
         <p class="sidebar-note">Folder-based notes and minimal pages.</p>
 
+        <nav class="section-tabs" aria-label="Site sections">
+          {sections.map((item) => (
+            <a
+              href={item.href}
+              class={`section-tab ${item.key === section ? 'is-active' : ''}`}
+              aria-current={item.key === section ? 'page' : undefined}
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
+
         <div class="sidebar-section">
-          <p class="sidebar-heading">Contents</p>
+          <p class="sidebar-heading">{sidebarHeading}</p>
           <nav aria-label="Wiki contents">
             <ul class="wiki-nav">
               {sidebarItems.map((item) => (
