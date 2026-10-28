@@ -1,0 +1,1686 @@
+---
+// Prompt Lab, Section 2: the playground.
+// Three windows: prompt editor (left), AI result (right), analysis (bottom, full width).
+// All network calls go through src/lib/openrouter.ts. Model text is always escaped
+// before rendering (see renderModelText), never injected as raw HTML.
+import { checklist } from '../../data/prompt-lab';
+import { playgroundPresets } from '../../data/playground-presets';
+import { DEFAULT_MODEL, DEFAULT_TEMPERATURE } from '../../lib/openrouter';
+
+const presetGroups = checklist.map((item) => ({
+  item,
+  presets: playgroundPresets
+    .filter((p) => p.element === item.key)
+    .sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'bad' ? -1 : 1)),
+}));
+---
+
+<div class="pg" data-playground>
+  <details class="pg-settings">
+    <summary>ตั้งค่า (รหัสคลาส, โมเดล, temperature, คีย์ของคุณเอง)</summary>
+    <div class="pg-settings-body">
+      <p class="pg-note">
+        โดยปกติคำขอทั้งหมดจะส่งผ่าน<strong>เซิร์ฟเวอร์ของเว็บนี้</strong> ซึ่งใส่คีย์ OpenRouter ให้เอง
+        คุณจึง<strong>ไม่ต้องมีคีย์</strong>ก็ใช้งานได้ แต่คีย์ของเว็บใช้ร่วมกันทุกคนและใช้โมเดลฟรีซึ่งมีโควตาจำกัด
+        ถ้าโควตาเต็มบ่อย ใส่คีย์ OpenRouter ของคุณเองด้านล่างได้
+      </p>
+
+      <div class="pg-field">
+        <label for="pg-labcode">รหัสคลาส (ถ้าผู้สอนกำหนด)</label>
+        <div class="pg-inline">
+          <input id="pg-labcode" type="text" spellcheck="false" autocomplete="off" autocapitalize="off" aria-describedby="pg-labcode-hint pg-labcode-status" />
+        </div>
+        <p id="pg-labcode-hint" class="pg-hint">
+          ถ้าผู้สอนให้รหัสคลาสมา ใส่ที่นี่ก่อนส่ง Prompt ระบบจะจำไว้ในเบราว์เซอร์นี้ (localStorage)
+          และส่งไปกับคำขอที่ผ่านเซิร์ฟเวอร์ของเว็บเท่านั้น ไม่ส่งไปที่ openrouter.ai ถ้าผู้สอนไม่ได้กำหนด ปล่อยว่างไว้ได้
+        </p>
+        <p id="pg-labcode-status" class="pg-hint pg-problem" aria-live="polite"></p>
+      </div>
+
+      <div class="pg-field">
+        <label for="pg-model">Model id</label>
+        <div class="pg-inline">
+          <input id="pg-model" type="text" spellcheck="false" autocomplete="off" placeholder={DEFAULT_MODEL} value={DEFAULT_MODEL} aria-describedby="pg-model-hint pg-model-status" />
+          <button type="button" class="lab-btn secondary" data-action="reset-model">ใช้ค่าเริ่มต้น</button>
+        </div>
+        <p id="pg-model-hint" class="pg-hint">
+          ค่าเริ่มต้น <code>{DEFAULT_MODEL}</code> ให้ OpenRouter เลือกโมเดลฟรีที่ว่างอยู่ให้อัตโนมัติ
+          ถ้าจะระบุเอง model id ที่ลงท้ายด้วย <code>:free</code> คือโมเดลฟรี
+          ซึ่งเป็นโมเดลเดียวที่ใช้ได้บนคีย์ของเว็บ (โมเดลอื่นต้องใส่คีย์ของคุณเอง)
+          (ดูรายชื่อได้ที่ <a href="https://openrouter.ai/models?max_price=0" target="_blank" rel="noopener noreferrer">openrouter.ai/models</a>)
+        </p>
+        <p id="pg-model-status" class="pg-hint pg-problem" aria-live="polite"></p>
+      </div>
+
+      <div class="pg-field">
+        <label for="pg-temp">Temperature</label>
+        <div class="pg-inline">
+          <input id="pg-temp" type="range" min="0" max="2" step="0.1" value={DEFAULT_TEMPERATURE} aria-describedby="pg-temp-hint" />
+          <output id="pg-temp-out" for="pg-temp">{DEFAULT_TEMPERATURE.toFixed(1)}</output>
+        </div>
+        <p id="pg-temp-hint" class="pg-hint">
+          ค่าต่ำ (0–0.3) ตอบคงที่และตรงไปตรงมา ค่าสูง (1 ขึ้นไป) สร้างสรรค์และสุ่มมากขึ้น ค่าเริ่มต้นคือ {DEFAULT_TEMPERATURE}
+        </p>
+      </div>
+
+      <div class="pg-field">
+        <label for="pg-key">คีย์ OpenRouter ของคุณเอง (ไม่บังคับ)</label>
+        <div class="pg-inline">
+          <input id="pg-key" type="password" spellcheck="false" autocomplete="off" placeholder="sk-or-v1-..." aria-describedby="pg-key-hint pg-key-status" />
+          <button type="button" class="lab-btn secondary" data-action="save-key">บันทึกคีย์</button>
+          <button type="button" class="lab-btn secondary" data-action="clear-key">ลบคีย์</button>
+        </div>
+        <p id="pg-key-hint" class="pg-hint">
+          คีย์จะถูกเก็บไว้<strong>ในเบราว์เซอร์ของคุณเท่านั้น</strong> (localStorage) และส่งตรงไปที่ openrouter.ai
+          ไม่ผ่านเซิร์ฟเวอร์ของเว็บนี้ ถ้าใช้คอมพิวเตอร์ส่วนรวม กด "ลบคีย์" ทุกครั้งหลังใช้งาน
+        </p>
+        <p id="pg-key-status" class="pg-hint pg-key-status" aria-live="polite">กำลังใช้: เซิร์ฟเวอร์ของเว็บ (ไม่ต้องมีคีย์)</p>
+      </div>
+    </div>
+  </details>
+
+  <div class="pg-windows">
+    <section class="pg-window pg-editor" aria-labelledby="pg-editor-title">
+      <header class="pg-bar">
+        <h2 id="pg-editor-title">Prompt ของคุณ</h2>
+        <span class="pg-count" data-el="count">0 ตัวอักษร · 0 คำ</span>
+      </header>
+      <div class="pg-body">
+        <div class="pg-field">
+          <label for="pg-preset">ลองจากตัวอย่าง</label>
+          <select id="pg-preset">
+            <option value="">— เลือก Prompt ตัวอย่าง (แบบไม่ดี / แบบดี) —</option>
+            {presetGroups.map(({ item, presets }) => (
+              <optgroup label={`${item.th} (${item.en})`}>
+                {presets.map((p) => (
+                  <option value={p.id}>{p.kind === 'bad' ? 'แบบไม่ดี' : 'แบบดี'}: {p.title}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
+
+        <div class="pg-field pg-grow">
+          <label for="pg-prompt" class="pg-sr-only">Prompt</label>
+          <textarea
+            id="pg-prompt"
+            spellcheck="false"
+            rows="14"
+            placeholder="พิมพ์ Prompt ที่นี่ (ภาษาไหนก็ได้) หรือเลือกจาก &quot;ลองจากตัวอย่าง&quot; ด้านบน"
+            aria-describedby="pg-shortcut"
+          ></textarea>
+        </div>
+
+        <div class="pg-actions">
+          <button type="button" class="lab-btn" data-action="submit">ส่ง Prompt</button>
+          <button type="button" class="lab-btn secondary" data-action="clear">ล้าง</button>
+          <span id="pg-shortcut" class="pg-hint">กด Ctrl + Enter (Mac: ⌘ + Enter) เพื่อส่ง</span>
+        </div>
+        <p class="pg-hint pg-editor-status" data-el="editor-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="pg-window pg-result" aria-labelledby="pg-result-title">
+      <header class="pg-bar">
+        <h2 id="pg-result-title">ผลลัพธ์จาก AI</h2>
+        <span class="pg-count" data-el="result-round"></span>
+      </header>
+      <div class="pg-body">
+        <p class="pg-status" data-el="result-status" role="status" aria-live="polite"></p>
+        <div class="pg-error" data-el="result-error" hidden>
+          <p class="pg-error-msg" data-el="result-error-msg"></p>
+          <p class="pg-error-detail" data-el="result-error-detail" hidden></p>
+          <div class="pg-actions">
+            <button type="button" class="lab-btn secondary" data-action="retry">ลองอีกครั้ง</button>
+          </div>
+        </div>
+        <div class="pg-output" data-el="result-output">
+          <p class="pg-placeholder">ผลลัพธ์จะแสดงที่นี่หลังจากกด "ส่ง Prompt"</p>
+        </div>
+        <p class="pg-trunc" data-el="result-trunc" hidden>
+          คำตอบนี้ถูกตัดกลางคันเพราะยาวเกินลิมิตโทเคนของสนามทดลอง ลองขอให้ AI ตอบสั้นลง หรือกำหนดความยาวใน Prompt
+        </p>
+        <div class="pg-actions" data-el="result-cancel" hidden>
+          <button type="button" class="lab-btn secondary" data-action="cancel">ยกเลิก</button>
+        </div>
+        <p class="pg-meta" data-el="result-meta" hidden></p>
+      </div>
+    </section>
+
+    <section class="pg-history-strip" aria-labelledby="pg-history-title">
+      <h2 id="pg-history-title" class="pg-history-title">ประวัติการทดลอง</h2>
+      <ol class="pg-history" data-el="history"></ol>
+      <p class="pg-hint" data-el="history-empty">
+        ยังไม่มีการทดลอง ส่ง Prompt แล้วคะแนนของแต่ละรอบจะแสดงที่นี่เพื่อเปรียบเทียบ (เก็บ 5 รอบล่าสุด เฉพาะในหน้านี้ รีเฟรชแล้วจะหายไป)
+      </p>
+    </section>
+
+    <section class="pg-window pg-analysis" aria-labelledby="pg-analysis-title">
+      <header class="pg-bar">
+        <h2 id="pg-analysis-title">วิเคราะห์ Prompt และผลลัพธ์</h2>
+      </header>
+      <div class="pg-body pg-analysis-grid">
+        <section class="pg-local" aria-labelledby="pg-local-title">
+          <h3 id="pg-local-title">ตรวจเบื้องต้น (ทันที)</h3>
+          <p class="pg-hint">
+            ตรวจจากคำสำคัญใน Prompt ที่กำลังพิมพ์ ไม่ได้ส่งไปหา AI เป็น<strong>แนวทางคร่าว ๆ</strong>เท่านั้น
+            ไม่ใช่ทุกงานต้องมีครบ 8 ข้อ
+          </p>
+          <p class="pg-local-summary" data-el="local-summary"></p>
+          <ul class="pg-local-list" data-el="local-list"></ul>
+        </section>
+
+        <section class="pg-coach" aria-labelledby="pg-coach-title">
+          <div class="pg-coach-head">
+            <h3 id="pg-coach-title">AI Coach (วิเคราะห์ละเอียด)</h3>
+            <div class="pg-inline pg-coach-controls">
+              <label class="pg-check">
+                <input type="checkbox" id="pg-auto" checked />
+                ให้ AI Coach วิเคราะห์อัตโนมัติ
+              </label>
+              <button type="button" class="lab-btn secondary" data-action="coach" disabled>วิเคราะห์</button>
+            </div>
+          </div>
+          <p class="pg-hint">
+            หลังได้ผลลัพธ์ AI Coach จะส่ง Prompt และผลลัพธ์ของคุณไปให้ AI อีกครั้งเพื่อให้คะแนนตาม 8 องค์ประกอบ (0–2 คะแนนต่อข้อ)
+            ทุกครั้งที่วิเคราะห์ใช้โควตาเพิ่มอีก 1 คำขอ ปิดการวิเคราะห์อัตโนมัติได้ถ้าอยากประหยัดโควตา
+          </p>
+          <p class="pg-status" data-el="coach-status" role="status" aria-live="polite"></p>
+          <div class="pg-error" data-el="coach-error" hidden>
+            <p class="pg-error-msg" data-el="coach-error-msg"></p>
+            <p class="pg-error-detail" data-el="coach-error-detail" hidden></p>
+          </div>
+          <div class="pg-coach-out" data-el="coach-output">
+            <p class="pg-placeholder">ยังไม่มีการวิเคราะห์</p>
+          </div>
+        </section>
+      </div>
+    </section>
+  </div>
+</div>
+
+<style>
+  /* Scoped to .pg. Content created at runtime (innerHTML) is reached via :global(). */
+  .pg {
+    margin: 1.25rem 0 2rem;
+  }
+
+  .pg :global(:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .pg :global(.pg-sr-only) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .pg :global(code) {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    padding: 0 0.25em;
+    background: var(--code-bg);
+    border: 1px solid var(--border-soft);
+  }
+
+  /* --- Settings --- */
+  .pg-settings {
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+    background: var(--panel-bg);
+  }
+
+  .pg-settings > summary {
+    padding: 0.5rem 0.85rem;
+    background: var(--sidebar-bg);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .pg-settings[open] > summary {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .pg-settings-body {
+    padding: 0.85rem;
+  }
+
+  .pg-note {
+    margin: 0 0 0.85rem;
+    padding: 0.6rem 0.85rem;
+    border-left: 3px solid var(--accent);
+    background: var(--sidebar-bg);
+    font-size: 0.92rem;
+  }
+
+  .pg-field {
+    margin-bottom: 0.75rem;
+  }
+
+  .pg-field > label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+    font-size: 0.92rem;
+  }
+
+  .pg-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  input[type='text'],
+  input[type='password'],
+  select,
+  textarea {
+    font: inherit;
+    font-size: 0.95rem;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 0;
+    padding: 0.4rem 0.55rem;
+  }
+
+  input[type='text'],
+  input[type='password'] {
+    flex: 1 1 16rem;
+    min-width: 0;
+    font-family: var(--mono);
+    font-size: 0.88rem;
+  }
+
+  input[type='range'] {
+    flex: 0 1 16rem;
+  }
+
+  output {
+    min-width: 2.5rem;
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+
+  select {
+    width: 100%;
+  }
+
+  .pg :global(.pg-hint) {
+    margin: 0.3rem 0 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  .pg-key-status {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* --- Windows --- */
+  .pg-windows {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'editor result'
+      'history history'
+      'analysis analysis';
+    gap: 1rem;
+  }
+
+  .pg-editor { grid-area: editor; }
+  .pg-result { grid-area: result; }
+  .pg-history-strip { grid-area: history; }
+  .pg-analysis { grid-area: analysis; }
+
+  .pg-window {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border: 1px solid var(--border);
+    background: var(--panel-bg);
+  }
+
+  .pg-bar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.45rem 0.85rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--sidebar-bg);
+  }
+
+  .pg-bar h2 {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  .pg-count {
+    color: var(--muted);
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+
+  .pg-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    padding: 0.85rem;
+  }
+
+  .pg-grow {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  textarea {
+    flex: 1;
+    width: 100%;
+    min-height: 18rem;
+    resize: vertical;
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    line-height: 1.55;
+  }
+
+  .pg :global(.pg-actions) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+  }
+
+  .pg :global(.pg-actions[hidden]) {
+    display: none;
+  }
+
+  .pg-editor-status:empty {
+    display: none;
+  }
+
+  /* Status lines and problem lines stay rendered (no display toggling) so screen readers
+     announce their text reliably when it changes. */
+  .pg-status:empty,
+  .pg-status.is-empty {
+    margin: 0;
+  }
+
+  .pg :global(.pg-problem) {
+    color: var(--bad);
+    font-weight: 600;
+  }
+
+  .pg :global(.pg-problem:empty) {
+    margin: 0;
+  }
+
+  .pg :global(.pg-trunc) {
+    margin: 0.5rem 0 0;
+    padding: 0.4rem 0.6rem;
+    border-left: 3px solid var(--warn);
+    background: var(--warn-bg);
+    font-size: 0.85rem;
+  }
+
+  .pg :global(.pg-trunc[hidden]) {
+    display: none;
+  }
+
+  .pg-status {
+    margin: 0 0 0.6rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+
+  .pg-status.is-loading::before {
+    content: '';
+    display: inline-block;
+    width: 0.7em;
+    height: 0.7em;
+    margin-right: 0.45em;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    vertical-align: -0.05em;
+    animation: pg-spin 0.8s linear infinite;
+  }
+
+  @keyframes pg-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pg-status.is-loading::before { animation: none; }
+  }
+
+  .pg :global(.pg-placeholder) {
+    margin: 0;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  /* Model output: escaped text with a tiny markdown subset. */
+  .pg-output {
+    flex: 1;
+    min-height: 18rem;
+    max-height: 34rem;
+    overflow: auto;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid var(--border-soft);
+    background: var(--bg);
+    font-size: 0.95rem;
+    overflow-wrap: anywhere;
+  }
+
+  .pg-output :global(p),
+  .pg :global(.pg-coach-text p) {
+    margin: 0 0 0.7rem;
+  }
+
+  .pg-output :global(ul),
+  .pg-output :global(ol),
+  .pg :global(.pg-coach-text ul),
+  .pg :global(.pg-coach-text ol) {
+    margin: 0 0 0.7rem;
+    padding-left: 1.4rem;
+  }
+
+  .pg-output :global(pre),
+  .pg :global(.pg-coach-text pre) {
+    margin: 0 0 0.7rem;
+    padding: 0.6rem 0.75rem;
+    overflow-x: auto;
+    border: 1px solid var(--border-soft);
+    background: var(--code-bg);
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .pg :global(pre code) {
+    padding: 0;
+    border: 0;
+    background: none;
+    white-space: pre;
+  }
+
+  .pg-output > :global(:last-child) {
+    margin-bottom: 0;
+  }
+
+  .pg :global(.pg-meta) {
+    margin: 0.5rem 0 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+    overflow-wrap: anywhere;
+  }
+
+  .pg :global(.pg-meta code) {
+    color: var(--text);
+  }
+
+  .pg-error {
+    margin: 0 0 0.75rem;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid var(--bad-border);
+    border-left: 3px solid var(--bad);
+    background: var(--bad-bg);
+  }
+
+  .pg-error[hidden] {
+    display: none;
+  }
+
+  .pg-error-msg {
+    margin: 0;
+  }
+
+  .pg-error-detail {
+    margin: 0.35rem 0 0;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    overflow-wrap: anywhere;
+  }
+
+  .pg-error .pg-actions {
+    margin-top: 0.5rem;
+  }
+
+  /* --- History --- */
+  .pg-history-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid var(--border);
+    background: var(--sidebar-bg);
+  }
+
+  .pg-history-title {
+    margin: 0;
+    font-size: 0.92rem;
+  }
+
+  .pg-history-strip .pg-hint {
+    margin: 0;
+  }
+
+  .pg-history {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .pg-history:empty {
+    display: none;
+  }
+
+  .pg-history :global(li) {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .pg-history :global(li + li)::before {
+    content: '→';
+    color: var(--muted);
+  }
+
+  .pg-history :global(button) {
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+
+  .pg-history :global(button:hover) {
+    border-color: var(--accent);
+  }
+
+  .pg-history :global(button[aria-current='true']) {
+    border-color: var(--accent);
+    box-shadow: inset 0 -2px 0 var(--accent);
+    font-weight: 700;
+  }
+
+  .pg-history :global(small) {
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  /* --- Analysis --- */
+  .pg-analysis-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: 1.25rem;
+  }
+
+  .pg-analysis h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+  }
+
+  .pg-local {
+    padding-right: 1.25rem;
+    border-right: 1px solid var(--border-soft);
+  }
+
+  .pg-local-summary {
+    margin: 0.6rem 0 0.4rem;
+    font-weight: 600;
+  }
+
+  .pg-local-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--border-soft);
+  }
+
+  .pg-local-list :global(li) {
+    display: grid;
+    grid-template-columns: 5.6rem minmax(0, 1fr);
+    gap: 0.15rem 0.6rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 0.9rem;
+  }
+
+  .pg-local-list :global(.lab-badge) {
+    align-self: start;
+    text-align: center;
+  }
+
+  .pg-local-list :global(.pg-local-name) {
+    font-weight: 600;
+  }
+
+  .pg-local-list :global(.pg-local-hint) {
+    grid-column: 2;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  .pg-coach-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .pg-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .pg-check input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+  }
+
+  .pg-coach-out {
+    margin-top: 0.75rem;
+  }
+
+  .pg-coach-out :global(.pg-total) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.85rem;
+    margin: 0 0 0.75rem;
+  }
+
+  .pg-coach-out :global(.pg-total strong) {
+    font-size: 1.35rem;
+  }
+
+  .pg-coach-out :global(.pg-scorebar) {
+    flex: 1 1 10rem;
+    height: 0.8rem;
+    border: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .pg-coach-out :global(.pg-scorebar span) {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+  }
+
+  .pg-coach-out :global(.pg-scorebar.is-low span) { background: var(--bad); }
+  .pg-coach-out :global(.pg-scorebar.is-mid span) { background: var(--warn); }
+  .pg-coach-out :global(.pg-scorebar.is-high span) { background: var(--good); }
+
+  .pg-coach-out :global(.pg-scores td:nth-child(2)) {
+    white-space: nowrap;
+  }
+
+  .pg-coach-out :global(.pg-dots) {
+    color: var(--accent);
+    font-size: 1.05rem;
+    letter-spacing: 0.08em;
+  }
+
+  .pg-coach-out :global(.pg-scores .is-missing) {
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .pg-coach-out :global(h4) {
+    margin: 1rem 0 0.35rem;
+    font-size: 0.95rem;
+  }
+
+  .pg-coach-out :global(.prompt-block) {
+    max-height: 22rem;
+    overflow: auto;
+  }
+
+  @media (max-width: 900px) {
+    .pg-windows {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        'editor'
+        'result'
+        'history'
+        'analysis';
+    }
+
+    .pg-analysis-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .pg-local {
+      padding-right: 0;
+      padding-bottom: 1rem;
+      border-right: 0;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .pg-output,
+    textarea {
+      min-height: 12rem;
+    }
+  }
+</style>
+
+<script>
+  import {
+    chat,
+    coachPrompt,
+    renderModelText,
+    escapeHtml,
+    modelProblem,
+    labCodeProblem,
+    LlmError,
+    DEFAULT_MODEL,
+    DEFAULT_TEMPERATURE,
+    RUN_MAX_TOKENS,
+    type ChatResult,
+    type CoachOutcome,
+  } from '../../lib/openrouter';
+  import { checklist, type ChecklistKey } from '../../data/prompt-lab';
+  import { playgroundPresets } from '../../data/playground-presets';
+
+  // ---------------------------------------------------------------------------
+  // Storage (per-viewer conveniences; every access wrapped in try/catch)
+  // ---------------------------------------------------------------------------
+  const STORE = {
+    key: 'promptlab.openrouterKey',
+    model: 'promptlab.model',
+    temp: 'promptlab.temperature',
+    auto: 'promptlab.autoCoach',
+    labCode: 'promptlab.labCode',
+  };
+
+  function load(name: string): string | null {
+    try {
+      return localStorage.getItem(name);
+    } catch {
+      return null;
+    }
+  }
+
+  function store(name: string, value: string | null): boolean {
+    try {
+      if (value === null) localStorage.removeItem(name);
+      else localStorage.setItem(name, value);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Local heuristic check (no API call). A rough keyword guide, not a grade.
+  // ---------------------------------------------------------------------------
+  // LOCAL-CHECK-START
+  type LocalCheck = { key: ChecklistKey; ok: boolean; hint: string };
+
+  const VERBS =
+    'write|explain|summari[sz]e|list|create|generate|classify|categori[sz]e|translate|compare|describe|fix|debug|refactor|review|answer|give|make|design|draft|rewrite|convert|extract|analy[sz]e|calculate|compute|find|suggest|recommend|plan|build|tell|help|identify|outline|evaluate|implement|show|define|propose|check|correct|edit|proofread|solve|predict|choose|rank|sort|return|brainstorm|teach|prepare|produce|optimi[sz]e|improve|assess|grade|label|detect|count|estimate|simplify|paraphrase|respond|reply|read|turn|act|imagine|name|provide|map|draw|test|validate';
+  const VERB_START = new RegExp(`^(?:please\\s+|now\\s+|then\\s+|first,?\\s+)?(${VERBS})\\b`, 'i');
+  const TASK_PHRASE = /\b(i want you to|i need (?:you to|a|an|help)|your task is|the task is|the goal is|i would like(?: you to)?|can you|could you|would you|help me)\b/i;
+  const TH_TASK = /(ช่วย|กรุณา|เขียน|อธิบาย|สรุป|แปล|สร้าง|วิเคราะห์|เปรียบเทียบ|แก้|จัดหมวดหมู่|ตอบ|ขอ|ออกแบบ|แนะนำ|คำนวณ|ตรวจ|บอก)/;
+
+  function countWords(text: string): number {
+    const t = text.trim();
+    if (!t) return 0;
+    const Seg = (Intl as any).Segmenter;
+    if (typeof Seg === 'function') {
+      try {
+        let n = 0;
+        for (const s of new Seg(undefined, { granularity: 'word' }).segment(t)) if (s.isWordLike) n++;
+        return n;
+      } catch {
+        /* fall through */
+      }
+    }
+    return t.split(/\s+/).length;
+  }
+
+  function quote(s: string): string {
+    const one = s.replace(/\s+/g, ' ').trim();
+    return `"${one.length > 40 ? `${one.slice(0, 40)}…` : one}"`;
+  }
+
+  function localCheck(text: string): LocalCheck[] {
+    const t = text.trim();
+    const len = t.length;
+    const words = countWords(t);
+    const res = {} as Record<ChecklistKey, LocalCheck>;
+    const set = (key: ChecklistKey, ok: boolean, hint: string) => {
+      res[key] = { key, ok, hint };
+    };
+
+    // Goal: imperative verb at the start of a sentence, or an explicit task phrase.
+    {
+      const sentences = (t.match(/[^.!?:\n]+[.!?:]?/g) ?? []).map((s) => s.trim()).filter(Boolean);
+      const verbHit = sentences.map((s) => s.match(VERB_START)).find(Boolean);
+      const phrase = t.match(TASK_PHRASE);
+      const question = sentences.find((s) => s.endsWith('?') && countWords(s) >= 5);
+      const thai = t.match(TH_TASK);
+      if (!t) set('goal', false, 'ยังไม่มี Prompt');
+      else if (words < 4) set('goal', false, 'Prompt สั้นมาก บอกแค่หัวข้อ ยังไม่บอกว่าจะให้ AI ทำอะไร ลองขึ้นต้นด้วยคำสั่ง เช่น "Explain…", "Write…"');
+      else if (verbHit) set('goal', true, `พบคำสั่งงาน ${quote(verbHit[1])} ตรวจว่าบอกผลลัพธ์ที่ต้องการชัดพอหรือยัง`);
+      else if (phrase) set('goal', true, `พบการระบุงาน ${quote(phrase[1])}`);
+      else if (question) set('goal', true, 'เป็นคำถามที่บอกสิ่งที่อยากรู้ ลองบอกด้วยว่าอยากได้คำตอบแบบไหน');
+      else if (thai) set('goal', true, `พบคำสั่งงาน ${quote(thai[1])}`);
+      else set('goal', false, 'ยังไม่เห็นคำสั่งงานที่ชัดเจน ลองเริ่มประโยคแรกด้วยสิ่งที่ต้องการ เช่น "Summarize this article in…"');
+    }
+
+    // Context: code / error blocks, inline data, or a longer prompt with background phrases.
+    {
+      const code =
+        /```|^ {4,}\S/m.test(t) || /\b(error|exception|traceback|stack trace)\s*[:\n]/i.test(t) || /\b\w+(Error|Exception)\b/.test(t);
+      const data = /<([a-z][\w-]*)>[\s\S]{20,}?<\/\1>/i.test(t);
+      const background =
+        /\b(i am|i'm|we are|we're|my|our|background|context|currently|i have|i've|i tried|using|version|because|so that|we use|running on|i work|project|situation)\b/i.test(t) ||
+        /(ฉัน|ผม|หนู|เรา|บริบท|ตอนนี้|กำลัง|พื้นหลัง|เวอร์ชัน|โปรเจกต์|ลองแล้ว)/.test(t);
+      if (code) set('context', true, 'พบโค้ดหรือ error message ที่ช่วยให้ AI เข้าใจปัญหา');
+      else if (data) set('context', true, 'พบข้อมูลประกอบที่แนบมาใน Prompt');
+      else if (len > 200 && background) set('context', true, 'มีข้อมูลพื้นหลังของสถานการณ์');
+      else if (len <= 200) set('context', false, 'Prompt ยังสั้น ลองเล่าสถานการณ์ เวอร์ชันของเครื่องมือ หรือแนบโค้ด/error ที่เกี่ยวข้อง');
+      else set('context', false, 'ยังไม่เห็นข้อมูลพื้นหลัง ลองบอกว่าใช้ทำอะไร ในสถานการณ์ไหน ลองอะไรไปแล้วบ้าง');
+    }
+
+    // Audience: "for <someone>", beginner, students, audience...
+    {
+      const m =
+        t.match(/\bfor\s+(?:a\s+|an\s+|the\s+|my\s+|our\s+)?(?:complete\s+|total\s+|absolute\s+)?(beginners?|novices?|newbies?|students?|kids?|children|teens?|teenagers?|developers?|devs|engineers?|programmers?|managers?|executives?|customers?|clients?|users?|non-?technical\b[\w ]*|first-year[\w ]*|second-year[\w ]*|high-school[\w ]*|university[\w ]*|someone[\w ]*|people[\w ]*|readers?|parents?|teachers?|experts?|professionals?|colleagues?|my team|an audience|\d+-year-olds?)/i) ??
+        t.match(/\b(audience|beginners?|novices?|layperson|layman|non-?technical|\d+ years? old|eli5|explain like i'?m \w+|who (?:have|has) never [\w ]+|with no (?:prior )?(?:background|experience))\b/i) ??
+        t.match(/(ผู้อ่าน|กลุ่มเป้าหมาย|มือใหม่|ผู้เริ่มต้น|นักเรียน|นักศึกษา|เด็ก|คนทั่วไป|ผู้ฟัง|สำหรับคนที่)/);
+      if (m) set('audience', true, `ระบุผู้อ่าน ${quote(m[0])}`);
+      else set('audience', false, 'ยังไม่บอกว่าเขียนให้ใครอ่าน ลองเพิ่ม เช่น "for first-year students who have never coded"');
+    }
+
+    // Format: JSON / table / bullets / "return" / "format"...
+    {
+      const m =
+        t.match(/\b(json|yaml|csv|xml|markdown|table|tabular|bullets?|bullet points?|numbered list|list of|headings?|sections?|columns?|schema|template|format(?:ted)?|one per line|step[- ]by[- ]step|code block|label only|return (?:only|a|an|the|exactly)|respond (?:only )?(?:with|in)|answer (?:only )?(?:with|in)|output (?:only|as|in)|reply (?:only )?(?:with|in))\b/i) ??
+        t.match(/(ตาราง|หัวข้อ|เป็นข้อ ?ๆ?|รูปแบบ|ลิสต์|บรรทัดละ|ทีละขั้น)/);
+      if (m) set('format', true, `กำหนดรูปแบบผลลัพธ์ ${quote(m[0])}`);
+      else set('format', false, 'ยังไม่กำหนดหน้าตาผลลัพธ์ ลองระบุ เช่น JSON, ตาราง, bullet 3 ข้อ หรือหัวข้อที่ต้องมี');
+    }
+
+    // Examples: "Example:", Input:/Output:, "Review: ... Label:" pairs, Q:/A:.
+    {
+      const explicit = /\b(examples?\s*\d*\s*:|for example|e\.g\.|for instance)/i.test(t) || /ตัวอย่าง/.test(t);
+      const io = /^\s*(input|in)\s*\d*\s*:/im.test(t) && /^\s*(output|out)\s*\d*\s*:/im.test(t);
+      const pair = /^\s*[\w ]{1,20}:\s*\S.*\n\s*(label|output|answer|category|sentiment|result|class|tag|a)\s*:\s*\S/im.test(t);
+      const qa = /^\s*q\s*:.*\n\s*a\s*:/im.test(t);
+      if (io || pair || qa) set('examples', true, 'พบตัวอย่างคู่อินพุต/เอาต์พุต (Few-Shot)');
+      else if (explicit) set('examples', true, 'พบการยกตัวอย่าง ถ้าอยากได้ผลแม่นขึ้นให้ใส่เป็นคู่อินพุต/เอาต์พุต');
+      else set('examples', false, 'ยังไม่มีตัวอย่าง ถ้างานมีรูปแบบเฉพาะ ลองใส่คู่อินพุต-เอาต์พุต 1-3 คู่ (ไม่จำเป็นทุกงาน)');
+    }
+
+    // Constraints: numbers + units (words/sentences/...), tone, things to avoid.
+    {
+      const found: string[] = [];
+      if (
+        /\b\d+\s*(?:-|–|to)?\s*\d*\s*(words?|sentences?|paragraphs?|lines?|bullets?|bullet points?|items?|characters?|chars|tokens|points|examples|steps|pages?|minutes?|tweets?|hashtags?|options|ideas|questions|reasons|tips)\b/i.test(t) ||
+        /\b(under|at most|no more than|maximum|max|less than|fewer than|at least|exactly|between|within|up to)\s+\d+/i.test(t) ||
+        /(ไม่เกิน|อย่างน้อย|\d+\s*(คำ|ประโยค|ย่อหน้า|บรรทัด|ข้อ))/.test(t)
+      )
+        found.push('ความยาว');
+      if (
+        /\b(tone|formal|informal|casual|friendly|professional|polite|humou?rous|playful|serious|neutral|concise|brief|energetic|warm|encouraging)\b/i.test(t) ||
+        /(โทน|น้ำเสียง|ทางการ|เป็นกันเอง|กระชับ)/.test(t)
+      )
+        found.push('โทน');
+      if (/\b(avoid|do not|don't|never|without|no (?:emojis?|jargon|code|markdown|exclamation))\b/i.test(t) || /(ห้าม|หลีกเลี่ยง|ไม่ต้อง)/.test(t))
+        found.push('สิ่งที่ต้องเลี่ยง');
+      if (found.length) set('constraints', true, `พบข้อจำกัดด้าน${found.join(', ')}`);
+      else set('constraints', false, 'ยังไม่มีข้อจำกัด ลองกำหนดความยาว (เช่น under 100 words) โทนเสียง หรือขอบเขต');
+    }
+
+    // Grounding: delimiters (<document>, ```, """) and/or "only the text" / "if not in...".
+    {
+      const delim =
+        /<([a-z][\w-]*)>[\s\S]+?<\/\1>/i.test(t) ||
+        /```[\s\S]+?```/.test(t) ||
+        /"""[\s\S]+?"""/.test(t) ||
+        /'''[\s\S]+?'''/.test(t) ||
+        /^-{3,}\s*$[\s\S]+?^-{3,}\s*$/m.test(t);
+      const source =
+        /\b(only (?:use|the|based on|from|using|with)|using only|use only|based (?:only|solely) on|according to the|from the (?:text|document|passage|article|policy|context|data))\b/i.test(t) ||
+        /(อ้างอิง|เฉพาะ(?:จาก)?ข้อมูล|ตามเอกสาร)/.test(t);
+      const idk =
+        /\b(if (?:it is |it's |the answer is |this is |that is )?not (?:in|stated|mentioned|found|provided|given|available)|if you (?:don't|do not|cannot|can't) (?:know|find)|not stated in|(?:say|reply|answer|respond)[^.\n]{0,30}(?:don't know|do not know|not sure|not stated|unknown))/i.test(t) ||
+        /(ถ้าไม่มี(?:ข้อมูล|ใน)|ตอบว่าไม่รู้|ตอบว่าไม่ทราบ)/.test(t);
+      if (delim && (idk || source)) set('grounding', true, 'มีข้อมูลในตัวคั่น และบอกให้ใช้เฉพาะข้อมูลนั้นหรือตอบว่าไม่รู้ได้');
+      else if (delim) set('grounding', true, 'พบข้อมูลในตัวคั่นแล้ว ลองเพิ่ม "If the answer is not in the text, say so."');
+      else if (idk || source) set('grounding', true, 'บอกให้ใช้เฉพาะข้อมูลที่ให้แล้ว แต่ยังไม่เห็นเอกสารในตัวคั่น เช่น <document>…</document>');
+      else set('grounding', false, 'ถ้าคำถามต้องใช้ข้อมูลเฉพาะ แนบเอกสารใน <document>…</document> และอนุญาตให้ตอบว่าไม่รู้ (ไม่จำเป็นทุกงาน)');
+    }
+
+    // Evaluation: checkable success criteria only. A bare "must", "make sure" or ต้อง states a
+    // requirement but gives nothing to check, so it does not count on its own.
+    {
+      const verify = '(?:check (?:that|whether|if|your)|verify|ensure|make sure|confirm|double-check|validate)';
+      const amount = '(?:\\d|\\bexactly\\b|\\b(?:one|two|three|four|five|six|seven|eight|nine|ten)\\b)';
+      const m =
+        // an output marker the answer can be checked against
+        t.match(/\b(?:final answer|answer)\s*:|\b(?:starts?|begins?|ends?) with\b|\bon (?:a new|its own|a separate|one) line\b|\bthe (?:last|first|final) line\b/i) ??
+        // explicit counts or limits paired with a verify word in the same sentence
+        t.match(new RegExp(`\\b${verify}\\b[^.!?\\n]{0,80}?${amount}`, 'i')) ??
+        // test cases / expected output
+        t.match(/\b(?:test cases?|unit tests?|expected (?:output|result|answer)s?|should (?:return|output|print)|assert(?:ion)?s?)\b/i) ??
+        // rubric / scoring / pass-fail
+        t.match(/\b(?:rubric|(?:success|acceptance|grading|scoring|evaluation) criteria|pass\/fail|pass or fail|score (?:it |each \w+ |them |the \w+ )?(?:from \d|on a scale|out of \d))/i) ??
+        // "if … then reply …" with a fixed reply
+        t.match(/\bif\b[^.!?\n]{1,80}?\b(?:reply|respond|answer|say|output|return|write)\b[^.!?\n]{0,15}?(?:\b(?:exactly|only)\b|[:"“])/i) ??
+        // machine-checkable format
+        t.match(/\b(?:valid json|json schema|matches? (?:this|the) schema)\b/i) ??
+        // Thai equivalents
+        t.match(/(บรรทัดสุดท้าย|บรรทัดแรก|ขึ้นต้นด้วย|ลงท้ายด้วย|กรณีทดสอบ|ผลลัพธ์ที่คาดหวัง|เกณฑ์(?:การ)?(?:ให้คะแนน|ผ่าน|ตรวจ|ประเมิน)|ผ่าน\/ไม่ผ่าน|JSON ที่ถูกต้อง)/) ??
+        t.match(/(?:ตรวจ(?:สอบ)?(?:ว่า|ให้)|ให้แน่ใจว่า|เช็[กค]ว่า)[^\n]{0,60}?(?:\d|ไม่เกิน|อย่างน้อย|ครบ)/) ??
+        t.match(/ถ้า[^\n]{1,60}?ให้(?:ตอบ|พิมพ์|เขียน)(?:ว่า)?\s*["“:]/);
+      if (m) set('evaluation', true, `พบเกณฑ์ที่ตรวจได้ ${quote(m[0])}`);
+      else
+        set(
+          'evaluation',
+          false,
+          'ยังไม่มีเกณฑ์ที่ตรวจได้จริง ลองกำหนด เช่น "The last line must start with Answer:" จำนวนที่ต้องตรวจ หรือกรณีทดสอบ (แค่ "ต้อง…" หรือ "make sure…" ยังตรวจไม่ได้)',
+        );
+    }
+
+    return checklist.map((c) => res[c.key]);
+  }
+  // LOCAL-CHECK-END
+
+  // ---------------------------------------------------------------------------
+  // Playground
+  // ---------------------------------------------------------------------------
+  type Run = {
+    n: number;
+    prompt: string;
+    localScore: number;
+    status: 'loading' | 'done' | 'error';
+    result: ChatResult | null;
+    error: LlmError | null;
+    controller: AbortController | null;
+    coachController: AbortController | null;
+    startedAt: number;
+    coachStatus: 'idle' | 'loading' | 'done' | 'error';
+    coachStartedAt: number;
+    coach: CoachOutcome | null;
+    coachError: LlmError | null;
+  };
+
+  const HISTORY_MAX = 5;
+  const nameOf = Object.fromEntries(checklist.map((c) => [c.key, c])) as Record<ChecklistKey, (typeof checklist)[number]>;
+
+  function toLlmError(err: unknown): LlmError {
+    if (err instanceof LlmError) return err;
+    return new LlmError('unknown', 'เกิดข้อผิดพลาดที่ไม่คาดคิด ลองกด "ลองอีกครั้ง"', null, err instanceof Error ? err.message : String(err));
+  }
+
+  function fmtUsage(r: ChatResult): string {
+    const parts = [`โมเดลที่ตอบ: <code>${escapeHtml(r.model)}</code>`];
+    if (r.requestedModel && r.requestedModel !== r.model) parts.push(`(ขอ <code>${escapeHtml(r.requestedModel)}</code>)`);
+    parts.push(`ใช้เวลา ${(r.latencyMs / 1000).toFixed(1)} วินาที`);
+    const u = r.usage;
+    if (u && (u.prompt_tokens != null || u.completion_tokens != null)) {
+      parts.push(
+        `โทเคน: ขาเข้า ${escapeHtml(String(u.prompt_tokens ?? '?'))} · ขาออก ${escapeHtml(String(u.completion_tokens ?? '?'))}` +
+          (u.total_tokens != null ? ` · รวม ${escapeHtml(String(u.total_tokens))}` : ''),
+      );
+    }
+    parts.push(r.via === 'own-key' ? 'ผ่านคีย์ของคุณ' : 'ผ่านเซิร์ฟเวอร์ของเว็บ');
+    return parts.join(' · ');
+  }
+
+  async function copyText(text: string): Promise<boolean> {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch {
+      /* fall back */
+    }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+
+  function init(root: HTMLElement) {
+    const q = <T extends Element = HTMLElement>(sel: string) => root.querySelector(sel) as T;
+    const el = (name: string) => q<HTMLElement>(`[data-el="${name}"]`);
+    const btn = (action: string) => q<HTMLButtonElement>(`[data-action="${action}"]`);
+
+    const promptEl = q<HTMLTextAreaElement>('#pg-prompt');
+    const presetEl = q<HTMLSelectElement>('#pg-preset');
+    const modelEl = q<HTMLInputElement>('#pg-model');
+    const tempEl = q<HTMLInputElement>('#pg-temp');
+    const tempOut = q<HTMLOutputElement>('#pg-temp-out');
+    const keyEl = q<HTMLInputElement>('#pg-key');
+    const keyStatus = q<HTMLElement>('#pg-key-status');
+    const labCodeEl = q<HTMLInputElement>('#pg-labcode');
+    const labCodeStatus = q<HTMLElement>('#pg-labcode-status');
+    const modelStatus = q<HTMLElement>('#pg-model-status');
+    const settingsEl = q<HTMLDetailsElement>('.pg-settings');
+    const autoEl = q<HTMLInputElement>('#pg-auto');
+    const editorStatus = el('editor-status');
+    const countEl = el('count');
+
+    const history: Run[] = [];
+    let current: Run | null = null;
+    let roundCounter = 0;
+    let savedKey = '';
+    let tick: number | undefined;
+    let localTimer: number | undefined;
+
+    // --- settings -----------------------------------------------------------
+    const storedModel = load(STORE.model);
+    if (storedModel) modelEl.value = storedModel;
+    const storedTemp = parseFloat(load(STORE.temp) ?? '');
+    if (Number.isFinite(storedTemp) && storedTemp >= 0 && storedTemp <= 2) tempEl.value = String(storedTemp);
+    tempOut.value = Number(tempEl.value).toFixed(1);
+    autoEl.checked = load(STORE.auto) !== '0';
+    savedKey = (load(STORE.key) ?? '').trim();
+    if (savedKey) keyEl.value = savedKey;
+    labCodeEl.value = (load(STORE.labCode) ?? '').trim();
+
+    const maskKey = (k: string) => (k.length > 12 ? `${k.slice(0, 6)}…${k.slice(-4)}` : '••••');
+
+    function renderKeyStatus(extra = '') {
+      keyStatus.textContent =
+        (savedKey ? `กำลังใช้: คีย์ของคุณเอง (${maskKey(savedKey)}) ส่งตรงไปที่ openrouter.ai` : 'กำลังใช้: เซิร์ฟเวอร์ของเว็บ (ไม่ต้องมีคีย์)') +
+        (extra ? ` · ${extra}` : '');
+    }
+    renderKeyStatus();
+
+    /** Show (and return) why the model id cannot be used in the current mode. */
+    function checkModel(): string | null {
+      const problem = modelProblem(modelEl.value.trim() || DEFAULT_MODEL, !!savedKey);
+      modelStatus.textContent = problem ?? '';
+      modelEl.setAttribute('aria-invalid', problem ? 'true' : 'false');
+      return problem;
+    }
+
+    /** Show (and return) why the class code cannot be sent. */
+    function checkLabCode(): string | null {
+      const problem = labCodeProblem(labCodeEl.value);
+      labCodeStatus.textContent = problem ?? '';
+      labCodeEl.setAttribute('aria-invalid', problem ? 'true' : 'false');
+      return problem;
+    }
+
+    function openSettingsAt(field: HTMLInputElement) {
+      settingsEl.open = true;
+      field.focus();
+      field.scrollIntoView?.({ block: 'center' });
+    }
+
+    /** Send the student to the setting that caused this error, if any. */
+    function focusSettingFor(err: LlmError | null) {
+      if (err?.kind === 'lab-code') openSettingsAt(labCodeEl);
+      else if (err?.kind === 'model-not-allowed') openSettingsAt(modelEl);
+    }
+
+    checkModel();
+    checkLabCode();
+
+    modelEl.addEventListener('input', () => checkModel());
+    modelEl.addEventListener('change', () => {
+      const v = modelEl.value.trim();
+      modelEl.value = v;
+      store(STORE.model, v && v !== DEFAULT_MODEL ? v : null);
+      checkModel();
+    });
+    btn('reset-model').addEventListener('click', () => {
+      modelEl.value = DEFAULT_MODEL;
+      store(STORE.model, null);
+      checkModel();
+    });
+    labCodeEl.addEventListener('input', () => {
+      store(STORE.labCode, labCodeEl.value.trim() || null);
+      checkLabCode();
+    });
+    labCodeEl.addEventListener('change', () => {
+      labCodeEl.value = labCodeEl.value.trim();
+    });
+    tempEl.addEventListener('input', () => {
+      tempOut.value = Number(tempEl.value).toFixed(1);
+    });
+    tempEl.addEventListener('change', () => {
+      store(STORE.temp, Number(tempEl.value) === DEFAULT_TEMPERATURE ? null : tempEl.value);
+    });
+    autoEl.addEventListener('change', () => {
+      store(STORE.auto, autoEl.checked ? null : '0');
+      renderCoachStatus();
+    });
+
+    btn('save-key').addEventListener('click', () => {
+      const k = keyEl.value.trim();
+      if (!k) {
+        renderKeyStatus('ช่องคีย์ว่างอยู่ ถ้าจะเลิกใช้คีย์ของคุณให้กด "ลบคีย์"');
+        return;
+      }
+      savedKey = k;
+      const ok = store(STORE.key, k);
+      const warn = k.startsWith('sk-or-') ? '' : 'คีย์ OpenRouter ปกติขึ้นต้นด้วย sk-or- ตรวจสอบอีกครั้ง';
+      renderKeyStatus([ok ? 'บันทึกแล้ว' : 'เบราว์เซอร์ไม่อนุญาตให้บันทึก จะใช้คีย์นี้จนกว่าจะปิดหน้า', warn].filter(Boolean).join(' · '));
+      checkModel();
+    });
+    btn('clear-key').addEventListener('click', () => {
+      savedKey = '';
+      keyEl.value = '';
+      store(STORE.key, null);
+      renderKeyStatus('ลบคีย์ออกจากเบราว์เซอร์แล้ว');
+      checkModel();
+    });
+
+    const opts = () => ({
+      model: modelEl.value.trim() || DEFAULT_MODEL,
+      temperature: Number(tempEl.value),
+      apiKey: savedKey || null,
+      // Sent as X-Lab-Code by chat() in proxy mode only (never with an own key).
+      labCode: labCodeEl.value.trim() || null,
+    });
+
+    // --- editor -------------------------------------------------------------
+    function updateCounts() {
+      const v = promptEl.value;
+      countEl.textContent = `${v.length.toLocaleString()} ตัวอักษร · ${countWords(v).toLocaleString()} คำ`;
+    }
+
+    function renderLocal() {
+      const checks = localCheck(promptEl.value);
+      const okCount = checks.filter((c) => c.ok).length;
+      el('local-summary').textContent = promptEl.value.trim()
+        ? `พบ ${okCount} จาก ${checks.length} องค์ประกอบ`
+        : 'พิมพ์ Prompt แล้วผลการตรวจจะอัปเดตทันที';
+      el('local-list').innerHTML = checks
+        .map((c) => {
+          const item = nameOf[c.key];
+          return `<li>
+            <span class="lab-badge ${c.ok ? 'good' : 'warn'}">${c.ok ? 'พบ' : 'ยังไม่พบ'}</span>
+            <span class="pg-local-name">${escapeHtml(item.th)} <span class="pg-hint">(${escapeHtml(item.en)})</span></span>
+            <span class="pg-local-hint">${escapeHtml(c.hint)}</span>
+          </li>`;
+        })
+        .join('');
+    }
+
+    function setPrompt(text: string, status: string) {
+      promptEl.value = text;
+      updateCounts();
+      renderLocal();
+      editorStatus.textContent = status;
+    }
+
+    promptEl.addEventListener('input', () => {
+      updateCounts();
+      window.clearTimeout(localTimer);
+      localTimer = window.setTimeout(renderLocal, 150);
+    });
+    promptEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        submit();
+      }
+    });
+
+    /**
+     * True when the editor holds text the student typed that is saved nowhere else
+     * (not a preset, not a history round) and differs from `incoming`.
+     */
+    function hasUnsavedText(incoming: string): boolean {
+      const cur = promptEl.value.trim();
+      if (!cur || cur === incoming.trim()) return false;
+      return !(playgroundPresets.some((p) => p.prompt.trim() === cur) || history.some((r) => r.prompt.trim() === cur));
+    }
+
+    presetEl.addEventListener('change', () => {
+      const preset = playgroundPresets.find((p) => p.id === presetEl.value);
+      presetEl.value = '';
+      if (!preset) return;
+      if (hasUnsavedText(preset.prompt) && !window.confirm('แทนที่ Prompt ที่พิมพ์ไว้ด้วยตัวอย่างนี้?')) return;
+      const item = nameOf[preset.element];
+      setPrompt(preset.prompt, `โหลดตัวอย่าง "${preset.title}" (${item.th}, ${preset.kind === 'bad' ? 'แบบไม่ดี' : 'แบบดี'}) แล้ว กด "ส่ง Prompt" เพื่อดูผล`);
+      promptEl.focus();
+    });
+
+    btn('clear').addEventListener('click', () => {
+      setPrompt('', '');
+      promptEl.focus();
+    });
+    btn('submit').addEventListener('click', () => submit());
+    btn('retry').addEventListener('click', () => {
+      if (isBusy() || inFlight()) return;
+      if (current && current.status === 'error') execute(current);
+    });
+    // Cancels whatever the current round is waiting for: the answer and/or the AI Coach.
+    btn('cancel').addEventListener('click', () => {
+      current?.controller?.abort();
+      current?.coachController?.abort();
+    });
+    btn('coach').addEventListener('click', () => {
+      if (current && current.result) runCoach(current);
+    });
+
+    // --- runs ---------------------------------------------------------------
+    /** A run (answer) request is in flight. */
+    const isBusy = () => history.some((r) => r.status === 'loading');
+    /** Any request (answer or AI Coach) is in flight. */
+    const inFlight = () => history.some((r) => r.status === 'loading' || r.coachStatus === 'loading');
+
+    function submit() {
+      const prompt = promptEl.value.trim();
+      if (!prompt) {
+        editorStatus.textContent = 'พิมพ์ Prompt ก่อนส่ง หรือเลือกจาก "ลองจากตัวอย่าง"';
+        promptEl.focus();
+        return;
+      }
+      if (isBusy()) {
+        editorStatus.textContent = 'กำลังรอคำตอบของรอบก่อนอยู่ รอสักครู่หรือกด "ยกเลิก"';
+        return;
+      }
+      const modelIssue = checkModel();
+      if (modelIssue) {
+        editorStatus.textContent = modelIssue;
+        openSettingsAt(modelEl);
+        return;
+      }
+      const codeIssue = savedKey ? null : checkLabCode();
+      if (codeIssue) {
+        editorStatus.textContent = codeIssue;
+        openSettingsAt(labCodeEl);
+        return;
+      }
+      editorStatus.textContent = '';
+      const run: Run = {
+        n: ++roundCounter,
+        prompt,
+        localScore: localCheck(prompt).filter((c) => c.ok).length,
+        status: 'loading',
+        result: null,
+        error: null,
+        controller: null,
+        coachController: null,
+        startedAt: 0,
+        coachStatus: 'idle',
+        coachStartedAt: 0,
+        coach: null,
+        coachError: null,
+      };
+      history.push(run);
+      while (history.length > HISTORY_MAX) history.shift();
+      current = run;
+      execute(run);
+    }
+
+    async function execute(run: Run) {
+      run.status = 'loading';
+      run.error = null;
+      run.result = null;
+      run.coach = null;
+      run.coachError = null;
+      run.coachStatus = 'idle';
+      run.controller = new AbortController();
+      run.startedAt = Date.now();
+      renderAll();
+      startTick();
+      try {
+        run.result = await chat([{ role: 'user', content: run.prompt }], {
+          ...opts(),
+          maxTokens: RUN_MAX_TOKENS,
+          signal: run.controller.signal,
+        });
+        run.status = 'done';
+      } catch (err) {
+        run.error = toLlmError(err);
+        run.status = 'error';
+      } finally {
+        run.controller = null;
+        stopTickIfIdle();
+      }
+      renderAll();
+      if (run === current) focusSettingFor(run.error);
+      if (run.status === 'done' && autoEl.checked) runCoach(run);
+    }
+
+    async function runCoach(run: Run) {
+      if (!run.result || run.coachStatus === 'loading') return;
+      run.coachStatus = 'loading';
+      run.coachStartedAt = Date.now();
+      run.coachError = null;
+      run.coach = null;
+      run.coachController = new AbortController();
+      renderHistory();
+      renderControls();
+      if (run === current) renderCoach();
+      startTick();
+      try {
+        run.coach = await coachPrompt(run.prompt, run.result.content, { ...opts(), signal: run.coachController.signal });
+        run.coachStatus = 'done';
+      } catch (err) {
+        run.coachError = toLlmError(err);
+        run.coachStatus = 'error';
+      } finally {
+        run.coachController = null;
+        stopTickIfIdle();
+      }
+      renderHistory();
+      renderControls();
+      if (run === current) {
+        renderCoach();
+        focusSettingFor(run.coachError);
+      }
+    }
+
+    // Elapsed-time ticker for loading states.
+    function startTick() {
+      if (tick !== undefined) return;
+      tick = window.setInterval(() => {
+        if (current?.status === 'loading') renderResultStatus();
+        if (current?.coachStatus === 'loading') renderCoachStatus();
+      }, 1000);
+    }
+    function stopTickIfIdle() {
+      if (history.some((r) => r.status === 'loading' || r.coachStatus === 'loading')) return;
+      window.clearInterval(tick);
+      tick = undefined;
+    }
+
+    // --- rendering ----------------------------------------------------------
+    function showError(prefix: 'result' | 'coach', err: LlmError | null) {
+      const box = el(`${prefix}-error`);
+      box.hidden = !err;
+      if (!err) return;
+      el(`${prefix}-error-msg`).textContent = err.message;
+      const d = el(`${prefix}-error-detail`);
+      const detail = [err.status ? `HTTP ${err.status}` : '', err.detail ?? ''].filter(Boolean).join(' · ');
+      d.hidden = !detail;
+      d.textContent = detail ? `รายละเอียด: ${detail}` : '';
+    }
+
+    /**
+     * Update a role="status" line. `text` is announced when it changes; `tail` (an
+     * elapsed-seconds counter) is visual only, so the ticker does not re-announce every second.
+     */
+    function setStatus(s: HTMLElement, text: string, tail = '') {
+      let main = s.querySelector<HTMLElement>('[data-part="main"]');
+      let extra = s.querySelector<HTMLElement>('[data-part="tail"]');
+      if (!main || !extra) {
+        main = document.createElement('span');
+        main.dataset.part = 'main';
+        extra = document.createElement('span');
+        extra.dataset.part = 'tail';
+        extra.setAttribute('aria-hidden', 'true');
+        s.replaceChildren(main, extra);
+      }
+      if (main.textContent !== text) main.textContent = text;
+      if (extra.textContent !== tail) extra.textContent = tail;
+      s.classList.toggle('is-empty', !text && !tail);
+    }
+
+    function renderResultStatus() {
+      const s = el('result-status');
+      const run = current;
+      s.classList.toggle('is-loading', run?.status === 'loading');
+      if (run?.status === 'loading') {
+        const sec = Math.floor((Date.now() - run.startedAt) / 1000);
+        setStatus(s, 'กำลังรอคำตอบจาก AI…', ` ${sec} วินาที${sec >= 8 ? ' (โมเดลฟรีอาจใช้เวลา 10–60 วินาที)' : ''}`);
+      } else if (run?.status === 'error') {
+        setStatus(s, run.error?.kind === 'aborted' ? `ยกเลิกรอบ ${run.n} แล้ว` : `ส่งรอบ ${run.n} ไม่สำเร็จ ดูสาเหตุด้านล่าง`);
+      } else if (run?.status === 'done' && run.result) {
+        setStatus(
+          s,
+          run.result.finishReason === 'length'
+            ? `ได้ผลลัพธ์แล้ว (รอบ ${run.n}) แต่คำตอบถูกตัดเพราะยาวเกินลิมิต`
+            : `ได้ผลลัพธ์แล้ว (รอบ ${run.n})`,
+        );
+      } else {
+        setStatus(s, '');
+      }
+    }
+
+    /** Buttons whose state depends on what is in flight (answer and/or AI Coach). */
+    function renderControls() {
+      const runLoading = current?.status === 'loading';
+      const coachLoading = current?.coachStatus === 'loading';
+      btn('submit').disabled = isBusy();
+      btn('retry').disabled = inFlight();
+      el('result-cancel').hidden = !runLoading && !coachLoading;
+      btn('cancel').textContent = runLoading ? 'ยกเลิก' : 'ยกเลิกการวิเคราะห์ของ AI Coach';
+    }
+
+    function renderResult() {
+      const run = current;
+      el('result-round').textContent = run ? `รอบ ${run.n}` : '';
+      renderResultStatus();
+      showError('result', run?.status === 'error' ? run.error : null);
+      renderControls();
+      el('result-trunc').hidden = !(run?.status === 'done' && run.result?.finishReason === 'length');
+
+      const out = el('result-output');
+      const meta = el('result-meta');
+      if (run?.status === 'done' && run.result) {
+        out.innerHTML = renderModelText(run.result.content);
+        meta.innerHTML = fmtUsage(run.result);
+        meta.hidden = false;
+        return;
+      }
+      meta.hidden = true;
+      out.innerHTML = !run
+        ? '<p class="pg-placeholder">ผลลัพธ์จะแสดงที่นี่หลังจากกด "ส่ง Prompt"</p>'
+        : run.status === 'loading'
+          ? '<p class="pg-placeholder">กำลังสร้างคำตอบ…</p>'
+          : '<p class="pg-placeholder">ยังไม่มีผลลัพธ์สำหรับรอบนี้</p>';
+    }
+
+    function renderCoachStatus() {
+      const s = el('coach-status');
+      const run = current;
+      s.classList.toggle('is-loading', run?.coachStatus === 'loading');
+      if (!run) {
+        setStatus(s, '');
+      } else if (run.coachStatus === 'loading') {
+        const sec = Math.floor((Date.now() - run.coachStartedAt) / 1000);
+        setStatus(s, `AI Coach กำลังวิเคราะห์ Prompt รอบ ${run.n}…`, ` ${sec} วินาที`);
+      } else if (run.coachStatus === 'error') {
+        setStatus(
+          s,
+          run.coachError?.kind === 'aborted'
+            ? 'ยกเลิกการวิเคราะห์แล้ว กด "วิเคราะห์อีกครั้ง" เมื่อพร้อม'
+            : 'AI Coach วิเคราะห์ไม่สำเร็จ กด "วิเคราะห์อีกครั้ง" เพื่อลองใหม่',
+        );
+      } else if (run.coachStatus === 'done') {
+        const report = run.coach?.report;
+        const cut = run.coach?.truncated || report?.partial;
+        setStatus(
+          s,
+          report
+            ? `AI Coach วิเคราะห์เสร็จแล้ว คะแนน ${report.total} จาก ${report.max}${cut ? ' (คำตอบของ AI Coach ถูกตัด บางข้ออาจไม่ครบ)' : ''}`
+            : 'AI Coach ตอบกลับมาแล้ว แต่อ่านคะแนนไม่ได้ ดูข้อความดิบด้านล่าง',
+        );
+      } else if (run.coachStatus === 'idle' && run.status === 'done') {
+        setStatus(s, 'กด "วิเคราะห์" เพื่อให้ AI Coach ให้คะแนน Prompt รอบนี้ (ใช้โควตาอีก 1 คำขอ)');
+      } else if (run.status === 'loading') {
+        setStatus(
+          s,
+          autoEl.checked
+            ? 'รอผลลัพธ์จาก AI ก่อน แล้ว AI Coach จะวิเคราะห์ต่ออัตโนมัติ'
+            : 'ปิดการวิเคราะห์อัตโนมัติอยู่ เมื่อได้ผลลัพธ์แล้วกด "วิเคราะห์" ได้',
+        );
+      } else {
+        setStatus(s, '');
+      }
+    }
+
+    function renderCoach() {
+      const run = current;
+      renderCoachStatus();
+      showError('coach', run?.coachStatus === 'error' ? run.coachError : null);
+      const coachBtn = btn('coach');
+      coachBtn.disabled = !run || run.status !== 'done' || run.coachStatus === 'loading';
+      coachBtn.textContent = run?.coachStatus === 'done' || run?.coachStatus === 'error' ? 'วิเคราะห์อีกครั้ง' : 'วิเคราะห์';
+
+      const out = el('coach-output');
+      if (!run || run.coachStatus !== 'done' || !run.coach) {
+        out.innerHTML = run?.coachStatus === 'loading' ? '' : '<p class="pg-placeholder">ยังไม่มีการวิเคราะห์</p>';
+        return;
+      }
+
+      const { report, raw, result, truncated } = run.coach;
+      const meta = `<p class="pg-meta">AI Coach · ${fmtUsage(result)}</p>`;
+      const cut = truncated || !!report?.partial;
+      if (!report) {
+        out.innerHTML = `
+          <div class="lab-callout warn">AI Coach ตอบกลับมาในรูปแบบที่อ่านเป็น JSON ไม่ได้ จึงแสดงข้อความดิบแทน ลองกด "วิเคราะห์อีกครั้ง" หรือเปลี่ยนโมเดล</div>
+          ${cut ? '<p class="pg-trunc">คำตอบของ AI Coach ยาวเกินลิมิตจึงถูกตัดกลางคัน</p>' : ''}
+          <pre class="prompt-block">${escapeHtml(raw)}</pre>
+          ${meta}`;
+        return;
+      }
+
+      const pct = Math.round((report.total / report.max) * 100);
+      const level = pct < 40 ? 'is-low' : pct < 70 ? 'is-mid' : 'is-high';
+      const rows = report.scores
+        .map((s) => {
+          const item = nameOf[s.key];
+          return `<tr>
+            <td><strong>${escapeHtml(item.th)}</strong><br><span class="lab-badge">${escapeHtml(item.en)}</span></td>
+            <td><span class="pg-dots" aria-hidden="true">${'●'.repeat(s.score)}${'○'.repeat(2 - s.score)}</span><span class="pg-sr-only">${s.score} จาก 2 คะแนน</span></td>
+            <td class="${s.missing ? 'is-missing' : ''}">${escapeHtml(s.comment || '—')}</td>
+            <td><a href="/prompt-lab#check-${s.key}">ดูเช็กลิสต์</a></td>
+          </tr>`;
+        })
+        .join('');
+      const missing = report.scores.filter((s) => s.missing).length;
+
+      out.innerHTML = `
+        <div class="pg-total">
+          <span>คะแนนรวมรอบ ${run.n}</span>
+          <strong>${report.total} / ${report.max}</strong>
+          <div class="pg-scorebar ${level}" role="img" aria-label="คะแนน ${report.total} จาก ${report.max}"><span style="width:${pct}%"></span></div>
+        </div>
+        ${
+          cut
+            ? '<p class="pg-trunc">คำตอบของ AI Coach ยาวเกินลิมิตจึงถูกตัดกลางคัน คะแนนที่แสดงมาจากส่วนที่ได้รับครบเท่านั้น ข้อที่ขาดนับเป็น 0 กด "วิเคราะห์อีกครั้ง" เพื่อลองใหม่ได้</p>'
+            : ''
+        }
+        ${missing ? `<p class="pg-hint">AI Coach ไม่ได้ให้คะแนนมา ${missing} ข้อ จึงนับเป็น 0 ไว้ก่อน</p>` : ''}
+        <div class="lab-table-wrap">
+          <table class="lab-table pg-scores">
+            <thead><tr><th scope="col">องค์ประกอบ</th><th scope="col">คะแนน</th><th scope="col">ความเห็น</th><th scope="col">อ่านเพิ่ม</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        ${report.overall ? `<h4>ภาพรวม</h4><div class="pg-coach-text">${renderModelText(report.overall)}</div>` : ''}
+        ${report.resultVsPrompt ? `<h4>ผลลัพธ์ตรงกับที่ Prompt ขอไหม</h4><div class="pg-coach-text">${renderModelText(report.resultVsPrompt)}</div>` : ''}
+        ${
+          report.improvedPrompt
+            ? `<h4>Prompt ที่ปรับปรุงแล้ว${report.partial ? ' (อาจไม่ครบเพราะถูกตัด)' : ''}</h4>
+               <pre class="prompt-block">${escapeHtml(report.improvedPrompt)}</pre>
+               <div class="pg-actions">
+                 <button type="button" class="lab-btn" data-action="use-improved">ใช้ Prompt นี้</button>
+                 <button type="button" class="lab-btn secondary" data-action="copy-improved">คัดลอก</button>
+                 <span class="pg-hint" data-el="copy-status" aria-live="polite"></span>
+               </div>`
+            : ''
+        }
+        ${meta}`;
+
+      const improved = report.improvedPrompt;
+      out.querySelector('[data-action="use-improved"]')?.addEventListener('click', () => {
+        setPrompt(improved, 'โหลด Prompt ที่ปรับปรุงแล้วลงในช่องแก้ไข ปรับต่อได้ แล้วกด "ส่ง Prompt" เพื่อเทียบคะแนนรอบใหม่');
+        promptEl.focus();
+        promptEl.scrollIntoView({ block: 'center' });
+      });
+      out.querySelector('[data-action="copy-improved"]')?.addEventListener('click', async () => {
+        const status = out.querySelector<HTMLElement>('[data-el="copy-status"]');
+        const ok = await copyText(improved);
+        if (status) status.textContent = ok ? 'คัดลอกแล้ว' : 'คัดลอกไม่สำเร็จ ลองเลือกข้อความแล้วกด Ctrl/⌘ + C';
+      });
+    }
+
+    function renderHistory() {
+      const list = el('history');
+      // Re-rendering replaces the buttons; keep keyboard focus on the same round.
+      const active = document.activeElement;
+      const focusedRound = active instanceof HTMLElement && list.contains(active) ? active.dataset.round : undefined;
+      el('history-empty').hidden = history.length > 0;
+      list.innerHTML = history
+        .map((r, i) => {
+          let score: string;
+          if (r.status === 'loading') score = 'กำลังส่ง…';
+          else if (r.status === 'error') score = 'ส่งไม่สำเร็จ';
+          else if (r.coachStatus === 'loading') score = 'กำลังวิเคราะห์…';
+          else if (r.coach?.report) score = `${r.coach.report.total}/${r.coach.report.max}`;
+          else score = '—/16';
+          const label = `รอบ ${r.n}: ${score} (ตรวจเบื้องต้น ${r.localScore}/8) กดเพื่อดูอีกครั้ง`;
+          return `<li><button type="button" data-index="${i}" data-round="${r.n}" aria-current="${r === current}" title="${escapeHtml(label)}">รอบ ${r.n}: ${escapeHtml(score)} <small>(เบื้องต้น ${r.localScore}/8)</small></button></li>`;
+        })
+        .join('');
+      if (focusedRound) list.querySelector<HTMLButtonElement>(`button[data-round="${focusedRound}"]`)?.focus();
+    }
+
+    el('history').addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-index]');
+      if (!b) return;
+      const i = Number(b.dataset.index);
+      const run = history[i];
+      if (!run) return;
+      // Same guard as the preset menu: never silently overwrite unsaved editor text.
+      if (hasUnsavedText(run.prompt) && !window.confirm(`แทนที่ Prompt ที่พิมพ์ไว้ด้วย Prompt ของรอบ ${run.n}?`)) return;
+      current = run;
+      setPrompt(run.prompt, `กลับมาดูรอบ ${run.n} แล้ว แก้ Prompt แล้วส่งใหม่เพื่อเทียบคะแนนได้`);
+      renderAll();
+      el('history').querySelector<HTMLButtonElement>(`button[data-index="${i}"]`)?.focus();
+    });
+
+    function renderAll() {
+      renderResult();
+      renderCoach();
+      renderHistory();
+    }
+
+    // initial paint
+    updateCounts();
+    renderLocal();
+    renderAll();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-playground]').forEach(init);
+</script>

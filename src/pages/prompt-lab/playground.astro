@@ -1,0 +1,50 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+import PromptPlayground from '../../components/lab/PromptPlayground.astro';
+import '../../styles/lab.css';
+import { labSidebarItems } from '../../data/prompt-lab';
+
+const sidebarItems = labSidebarItems('playground');
+---
+
+<BlogLayout
+  pageTitle="ส่วนที่ 2: สนามทดลอง Prompt"
+  sidebarItems={sidebarItems}
+  section="lab"
+  lang="th"
+  sidebarHeading="Prompt Lab"
+>
+  <article class="wiki-page lab-page">
+    <p class="page-kicker">AI Engineer 101 · Prompt Lab</p>
+    <h1>ส่วนที่ 2: สนามทดลอง Prompt</h1>
+    <p class="page-summary">
+      เขียน Prompt เอง ส่งให้ AI จริง แล้วดูว่าผลลัพธ์ออกมาเป็นอย่างไร จากนั้นให้ AI Coach
+      ให้คะแนนตาม <a href="/prompt-lab#checklist">เช็กลิสต์ 8 องค์ประกอบ</a> และเสนอ Prompt ที่ดีกว่า
+      ลองแก้แล้วส่งซ้ำเพื่อเทียบคะแนนแต่ละรอบ
+    </p>
+
+    <div class="lab-callout lab-prose">
+      <strong>วิธีใช้:</strong> เริ่มจาก "ลองจากตัวอย่าง" เลือก Prompt แบบไม่ดีขององค์ประกอบหนึ่ง ส่งดูผล
+      แล้วลองแบบดีขององค์ประกอบเดียวกันเพื่อเปรียบเทียบ หรือพิมพ์ Prompt ของคุณเองได้เลย (ภาษาไหนก็ได้)
+      ถ้าผู้สอนกำหนดรหัสคลาส ให้ใส่ในส่วน "ตั้งค่า" ก่อนส่ง
+      หน้านี้ใช้โมเดลฟรีผ่านคีย์ของเว็บที่ใช้ร่วมกันทั้งคลาส โควตาจึงจำกัด ส่งแต่ละครั้งใช้ 2 คำขอ (คำตอบ + AI Coach)
+      และอย่าใส่ข้อมูลส่วนตัวหรือความลับลงใน Prompt
+    </div>
+
+    <PromptPlayground />
+
+    <section aria-labelledby="next">
+      <h2 id="next">ไปต่อ</h2>
+      <div class="lab-next">
+        <a href="/prompt-lab">
+          <strong>← ภาพรวม: Prompt คืออะไร</strong>
+          <span>ทบทวนเช็กลิสต์ 8 องค์ประกอบของ Prompt ที่ดี</span>
+        </a>
+        <a href="/prompt-lab/quiz">
+          <strong>ส่วนที่ 1: เลือก Prompt ที่ดีกว่า</strong>
+          <span>ฝึกแยก Prompt ที่ดีกับไม่ดีในแต่ละองค์ประกอบ</span>
+        </a>
+      </div>
+    </section>
+  </article>
+</BlogLayout>
